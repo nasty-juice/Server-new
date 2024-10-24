@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Site{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <h1>Welcome to My Site</h1>
+        <p>base.html side</p>
+        <hr>
+    </header>
+    <nav>
+        
+    </nav>
+    <main>
+        {% block content %}
+        <!-- Content will be injected here -->
+        {% endblock %}
+        <hr>
+    </main>
+    <footer>
+        <p>base.html side</p>
+    </footer>
+</body>
+</html>

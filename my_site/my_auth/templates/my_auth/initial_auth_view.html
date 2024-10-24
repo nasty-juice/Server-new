@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}My Auth{% endblock title %}
+{% block content %}
+    <h1>my_auth Initial Auth View</h1>
+    <p>my_auth side</p>
+    {% block sub %}
+        {% comment %} # This is the sub block content {% endcomment %}
+    {% endblock sub %}
+{% endblock %}
