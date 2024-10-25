@@ -51,7 +51,10 @@ class CustomUserCreationForm(UserCreationForm, SignupForm):
         return user
 
 class StudentCardForm(forms.ModelForm):
+    
     class Meta:
         model = CustomUser
         fields = ['student_card_image']
+
+    template_name = 'my_auth/student_card_auth_view.html'
         
