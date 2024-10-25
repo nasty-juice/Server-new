@@ -15,7 +15,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECURE_MEDIA_ROOT = os.path.join(BASE_DIR, 'secure_media')
+SECURE_MEDIA_ROOT = os.path.join(BASE_DIR, 'student_card_images')
 MEDIA_URL = '/media/'
 
 # Quick-start development settings - unsuitable for production
@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     
-    
+    # Custom apps
     'my_app.apps.MyAppConfig',
     'my_auth.apps.MyAuthConfig',
     
@@ -59,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
     'allauth.account.middleware.AccountMiddleware',  # django-allauth middleware 추가
 ]
 
@@ -135,14 +136,8 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom user model. This is the path to the custom user model that we created in my_app/models.py. 
+# Change the default user model to the custom user model
 AUTH_USER_MODEL = 'my_app.CustomUser'
-
-# django-allauth settings
-# AUTHENTICATION_BACKENDS = [
-#     'my_app.backends.EmailBackend',
-#     'django.contrib.auth.backends.ModelBackend',
-# ]
 
 # 필수 설정
 SITE_ID = 1  # 사용하는 사이트의 ID 설정
@@ -162,10 +157,20 @@ EMAIL_HOST_USER = 'dev-jaehunshin@naver.com'
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # 환경 변수에서 비밀번호 읽기
 DEFAULT_FROM_EMAIL = 'dev-jaehunshin@naver.com'
 
-ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 
-ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BlueBerry 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 (일 단위)
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BLUEBERRY 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
 ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
+
+# 1. 인증되지 않은 사용자는 이메일 인증 후 로그인 페이지로 리디렉션
+ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/accounts/login/'
+
+# 2. 인증된 사용자는 이메일 인증 후 최종 리디렉션 페이지로 이동
+ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/my_auth/student-card-auth/'
+
+# 3. 로그인 후 최종 리디렉션 URL 설정
+LOGIN_REDIRECT_URL = '/my_auth/student-card-auth/'
+
 
 # django-allauth에서 사용할 폼을 커스텀 폼으로 설정
 ACCOUNT_FORMS = {

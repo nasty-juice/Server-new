@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Submit Student Card{% endblock title %}
+{% block title %}Student Card Auth{% endblock title %}
 {% block content %}
-    <h1>Insert Student Card</h1>
-    <form method="post" action="{% url "" %}">
+    <h1>Student Card Auth</h1>
+    <form method="post" action="{% url "my_auth:student_card_auth" %}">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Submit</button>
