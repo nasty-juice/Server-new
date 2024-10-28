@@ -1,37 +1,22 @@
-from typing import OrderedDict
 from django import forms
 from my_app.models import CustomUser
 from django.contrib.auth.forms import UserCreationForm
 from allauth.account.forms import SignupForm
-from .validators import validate_school_email
+from .validators import validate_school_email, validate_image_extension
 
 class CustomUserCreationForm(UserCreationForm, SignupForm):
     def __init__(self, *args, **kwargs):
         UserCreationForm.__init__(self, *args, **kwargs)  # Django 기본 사용자 생성 폼 초기화
         SignupForm.__init__(self, *args, **kwargs)        # 추가 기능을 위한 SignupForm 초기화
-
-        # 필드 순서 변경
-        self.fields = OrderedDict([
-            ('username', self.fields['username']),
-            ('student_number', self.fields['student_number']),
-            ('email', self.fields['email']),
-            ('password1', self.fields['password1']),
-            ('password2', self.fields['password2']),
-        ])
-
         
     email = forms.EmailField(validators=[validate_school_email])
 
     class Meta:
         model = CustomUser
-        fields = (
-            'username',
-            'student_number',
-            'email',
-            'password1',
-            'password2',
-            # 'student_card_image',
-        )
+         # 필드 순서 변경
+        fields = ('username', 'student_number', 'email', 'password1', 'password2')
+        field_order = ['username', 'student_number', 'email', 'password1', 'password2']
+
 
     def save(self, request):
         # UserCreationForm의 save 메서드를 먼저 호출하여 사용자 객체 생성 (commit=False로 저장 중간 처리)
@@ -50,11 +35,11 @@ class CustomUserCreationForm(UserCreationForm, SignupForm):
 
         return user
 
-class StudentCardForm(forms.ModelForm):
+class StudentCardForm(forms.Form):
+    student_card_image = forms.ImageField(
+        required=False,
+        validators=[validate_image_extension]
+    )
     
-    class Meta:
-        model = CustomUser
-        fields = ['student_card_image']
-
-    template_name = 'my_auth/student_card_auth_view.html'
-        
+    
+     

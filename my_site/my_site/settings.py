@@ -15,7 +15,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECURE_MEDIA_ROOT = os.path.join(BASE_DIR, 'student_card_images')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 # Quick-start development settings - unsuitable for production
@@ -143,12 +143,11 @@ AUTH_USER_MODEL = 'my_app.CustomUser'
 SITE_ID = 1  # 사용하는 사이트의 ID 설정
 
 # 이메일 인증과 관련된 설정
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"  # 이메일 인증을 필수로 설정
-ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # 이메일로 로그인하도록 설정
 LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정
@@ -160,6 +159,7 @@ DEFAULT_FROM_EMAIL = 'dev-jaehunshin@naver.com'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 (일 단위)
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BLUEBERRY 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
+# ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
 ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
 
 # 1. 인증되지 않은 사용자는 이메일 인증 후 로그인 페이지로 리디렉션

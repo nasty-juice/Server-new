@@ -21,10 +21,8 @@ class UserDetailView(DetailView):
     # <app_name>/<model_name>_detail.html
     context_object_name = 'user'
 
-def redirect_to_auth_login(request):
-    print("redirect_to_auth_login")
-    return redirect(reverse('my_auth:accounts/login'))
+# def redirect_to_auth_login(request):
+#     return redirect(reverse('my_auth:accounts/login'))
 
-def redirect_to_auth_signup(request):
-    print("redirect_to_auth_signup")
-    return redirect(reverse('my_auth:accounts/signup'))
+# def redirect_to_auth_signup(request):
+#     return redirect(reverse('my_auth:accounts/signup'))

@@ -2,9 +2,22 @@
 {% block title %}Student Card Auth{% endblock title %}
 {% block content %}
     <h1>Student Card Auth</h1>
-    <form method="post" action="{% url "my_auth:student_card_auth" %}">
+
+
+    <form method="post" action="{% url "my_auth:student_card_auth" %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Submit</button>
     </form>
+
+    {% if form.errors %}
+    <ul>
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+                <li>{{ field }}: {{ error }}</li>
+            {% endfor %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+
 {% endblock %}

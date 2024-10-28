@@ -1,0 +1,3 @@
+from my_app.models import CustomUser
+CustomUser.objects.get(email='jhshin0422@mju.ac.kr').delete()
+exit()
