@@ -2,3 +2,5 @@ venv/
 .env             
 my_site/.env     
 my_site\.env
+
+.temp
