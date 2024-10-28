@@ -18,7 +18,7 @@ def secure_upload_to(instance, filename):
 import os
 import pytesseract  # pip install pytesseract # need to install Tesseract-OCR.exe before using pytesseract.
 
-# pasrsing.py
+# pasrsing.py # test
 import re
 
 def parse_text(text_data):
