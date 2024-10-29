@@ -33,21 +33,21 @@ class StudentCardAuthView(FormView):
                 return self.form_invalid(form)
 
             # Save the student card image to the user model with a new filename
-
-            # Generate a new filename
             new_filename = f"{user.student_number}_student_card.jpg"
             print(f"New filename: {new_filename}")
 
-            # Save the image with the new filename
+            
             if not user.student_card_image:
                 user.student_card_image.save(new_filename, ContentFile(student_card_image.read()), save=False)
                 print("Student card image saved to user with new filename")
             else:
                 form.add_error('student_card_image', 'You have already uploaded a student card image.')
-                return self.form_invalid(form)
-            
-            # clean_dict = perform_ocr(student_card_image)  # 변환된 이미지를 OCR 함수로 전달
-            # print(f"OCR result: {clean_dict}")
+                return self.form_invalid(form)      
+
+            # print(type(student_card_image))
+
+            clean_dict = perform_ocr(student_card_image)  # 변환된 이미지를 OCR 함수로 전달
+            print(f"OCR result: {clean_dict}")
             
             # unknown_fields = get_unknown_fields(clean_dict)
             # if unknown_fields:
@@ -57,7 +57,7 @@ class StudentCardAuthView(FormView):
             
             # user.student_card_data = clean_dict
             # print("Student card data saved to user")
-
+            user.student_card_data = clean_dict
             user.save()
             print("User saved successfully")
 
