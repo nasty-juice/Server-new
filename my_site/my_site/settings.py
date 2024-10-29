@@ -19,6 +19,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 프로젝트 루트에 'media/' 디렉토리 설정
 
+# Private media files settings
+PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, 'private_media')  # 프로젝트 루트에 'private_media/' 디렉토리 설정
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

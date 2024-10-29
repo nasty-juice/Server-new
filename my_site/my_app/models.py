@@ -1,7 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from my_auth.utils import secure_upload_to
 import uuid
+import shutil
+import os
 
 # Create your models here.
 
@@ -20,7 +21,7 @@ class CustomUser(AbstractUser):
     email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
     
-    student_card_image = models.ImageField(upload_to='student_cards/', blank=True, null=True)
+    student_card_image = models.ImageField(upload_to= 'temp_student_cards/', blank=True, null=True)
     student_card_data = models.JSONField(blank=True, null=True, default=dict)
 
     
@@ -30,6 +31,7 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = 'email' # This field must be unique
     
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
+
 
     def __str__(self):
         return self.email
