@@ -20,7 +20,7 @@ class CustomUser(AbstractUser):
     email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
     
-    # student_card_image = models.ImageField(upload_to=secure_upload_to, blank=True, null=True)
+    student_card_image = models.ImageField(upload_to='student_cards/', blank=True, null=True)
     student_card_data = models.JSONField(blank=True, null=True, default=dict)
 
     

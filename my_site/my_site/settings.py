@@ -15,8 +15,9 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media files (uploads) settings
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 프로젝트 루트에 'media/' 디렉토리 설정
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -158,8 +159,8 @@ DEFAULT_FROM_EMAIL = 'dev-jaehunshin@naver.com'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 (일 단위)
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BLUEBERRY 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
-# ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
+# ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
 ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
 
 # 1. 인증되지 않은 사용자는 이메일 인증 후 로그인 페이지로 리디렉션

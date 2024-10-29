@@ -4,9 +4,7 @@ from django.views.generic import CreateView, ListView, DetailView, UpdateView, D
 
 from .forms import StudentCardForm
 from .utils import perform_ocr, get_unknown_fields
-
-from PIL import Image
-import io
+from my_app.models import CustomUser
 
 
 
@@ -15,6 +13,7 @@ def initial_auth_view(request):
     return render(request, 'my_auth/initial_auth_view.html')
 
 class StudentCardAuthView(FormView):
+    model = CustomUser
     form_class = StudentCardForm
     template_name = 'my_auth/student_card_auth_view.html'
     success_url = reverse_lazy('my_auth:initial_auth_view')
@@ -33,32 +32,19 @@ class StudentCardAuthView(FormView):
                 print("No student card image found")
                 return self.form_invalid(form)
                 
-
-             # 이미지를 BytesIO로 변환 후 열기
-            # 이미지를 BytesIO로 변환 후 열기
-            try:
-                image_data = student_card_image.read()  # 파일 데이터를 읽기
-                if image_data is None:
-                    form.add_error('student_card_image', "이미지 데이터를 읽을 수 없습니다.")
-                    return self.form_invalid(form)
-                
-                image = Image.open(io.BytesIO(image_data))  # BytesIO로 변환 후 열기
-                image.verify()  # 이미지 파일이 유효한지 검사
-            except Exception as e:
-                form.add_error('student_card_image', f"이미지 파일이 손상되었거나 지원되지 않는 형식입니다: {e}")
-                return self.form_invalid(form)
+            user.student_card_image = student_card_image
             
-            clean_dict = perform_ocr(image)  # 변환된 이미지를 OCR 함수로 전달
-            print(f"OCR result: {clean_dict}")
+            # clean_dict = perform_ocr(student_card_image)  # 변환된 이미지를 OCR 함수로 전달
+            # print(f"OCR result: {clean_dict}")
             
-            unknown_fields = get_unknown_fields(clean_dict)
-            if unknown_fields:
-                print(f"Unknown fields found: {unknown_fields}")
-                form.add_error(None, f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
-                return self.form_invalid(form)
+            # unknown_fields = get_unknown_fields(clean_dict)
+            # if unknown_fields:
+            #     print(f"Unknown fields found: {unknown_fields}")
+            #     form.add_error(None, f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
+            #     return self.form_invalid(form)
             
-            user.student_card_data = clean_dict
-            print("Student card data saved to user")
+            # user.student_card_data = clean_dict
+            # print("Student card data saved to user")
 
             user.save()
             print("User saved successfully")
