@@ -1,0 +1,5 @@
+1. venv 생성
+2. pip install -r requirements.txt
+3. .env 파일 작성 -> .gitignore 확인
+4. runserver 시 포트번호 확인 8100
+5. settings.py -> stmp / madatory 설정
