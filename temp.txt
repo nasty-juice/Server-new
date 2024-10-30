@@ -1,7 +1,16 @@
+# 특정 이메일 삭제
 from my_app.models import CustomUser
 CustomUser.objects.get(email='jhshin0422@mju.ac.kr').delete()
 exit()
 
+
+# 전체 삭제
 from my_app.models import CustomUser
 CustomUser.objects.all().delete()
 exit()
+
+# 특정 필드 삭제
+user = CustomUser.objects.get(email='  ')
+user.student_image = None
+user.student_data = None
+user.save() 

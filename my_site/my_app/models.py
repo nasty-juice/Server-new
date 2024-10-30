@@ -1,10 +1,14 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 import uuid
-import shutil
 import os
+from .storages import PrivateMediaStorage
 
-# Create your models here.
+def user_directory_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/private_media/<filename>
+    # return os.path.join(settings.PRIVATE_MEDIA_ROOT, 'private_media', filename)
+    return os.path.join(settings.PRIVATE_MEDIA_ROOT, filename)
 
 class CustomUser(AbstractUser):
     # Override the default User model
@@ -21,7 +25,7 @@ class CustomUser(AbstractUser):
     email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
     
-    student_card_image = models.ImageField(upload_to= 'temp_student_cards/', blank=True, null=True)
+    student_card_image = models.ImageField(storage=PrivateMediaStorage() ,upload_to = 'student_cards/', blank=True, null=True)
     student_card_data = models.JSONField(blank=True, null=True, default=dict)
 
     
@@ -32,6 +36,10 @@ class CustomUser(AbstractUser):
     
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
 
-
+    def save(self, *args, **kwargs):
+        if self.student_card_image:
+            self.student_card_image.storage.location = settings.PRIVATE_MEDIA_ROOT
+        super().save(*args, **kwargs)
+    
     def __str__(self):
         return self.email

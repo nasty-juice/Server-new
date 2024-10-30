@@ -41,8 +41,6 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 def perform_ocr(image):
     image.seek(0)
-    
-     # InMemoryUploadedFile을 Pillow 이미지로 변환
     image = Image.open(BytesIO(image.read()))
     
     # OCR 실행 (한국어와 영어 혼용 인식)

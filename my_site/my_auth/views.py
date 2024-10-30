@@ -13,6 +13,7 @@ def initial_auth_view(request):
     return render(request, 'my_auth/initial_auth_view.html')
 
 class StudentCardAuthView(FormView):
+
     model = CustomUser
     form_class = StudentCardForm
     template_name = 'my_auth/student_card_auth_view.html'
@@ -49,16 +50,17 @@ class StudentCardAuthView(FormView):
             clean_dict = perform_ocr(student_card_image)  # 변환된 이미지를 OCR 함수로 전달
             print(f"OCR result: {clean_dict}")
             
-            # unknown_fields = get_unknown_fields(clean_dict)
-            # if unknown_fields:
-            #     print(f"Unknown fields found: {unknown_fields}")
-            #     form.add_error(None, f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
-            #     return self.form_invalid(form)
+            unknown_fields = get_unknown_fields(clean_dict)
+            if unknown_fields:
+                print(f"Unknown fields found: {unknown_fields}")
+                form.add_error(None, f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
+                return self.form_invalid(form)
             
             # user.student_card_data = clean_dict
             # print("Student card data saved to user")
             user.student_card_data = clean_dict
             user.save()
+            print(user.student_card_image.name, user.student_card_image.path)
             print("User saved successfully")
 
         except Exception as e:
@@ -73,3 +75,7 @@ class StudentCardAuthView(FormView):
         response = super().form_invalid(form)
         response.status_code = 400
         return response
+
+
+
+

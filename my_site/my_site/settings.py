@@ -14,13 +14,14 @@ from pathlib import Path
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+BASE_URL = "http://127.0.0.1:8100"
 # Media files (uploads) settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 프로젝트 루트에 'media/' 디렉토리 설정
 
 # Private media files settings
 PRIVATE_MEDIA_ROOT = os.path.join(BASE_DIR, 'private_media')  # 프로젝트 루트에 'private_media/' 디렉토리 설정
+PRIVATE_MEDIA_URL = '/private_media/'  # 이 URL은 직접 사용되지 않고, 커스텀 뷰를 통해서만 접근합니다.
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
