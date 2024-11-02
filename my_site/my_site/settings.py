@@ -14,7 +14,7 @@ from pathlib import Path
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_URL = "http://127.0.0.1:8100"
+BASE_URL = "http://127.0.0.1:8000"
 # Media files (uploads) settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 프로젝트 루트에 'media/' 디렉토리 설정
@@ -174,8 +174,10 @@ ACCOUNT_EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = '/accounts/login/'
 ACCOUNT_EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = '/my_auth/student-card-auth/'
 
 # 3. 로그인 후 최종 리디렉션 URL 설정
-LOGIN_REDIRECT_URL = '/my_auth/student-card-auth/'
+from django.urls import reverse_lazy
 
+# 4. 로그인 URL 설정
+LOGIN_URL = reverse_lazy('my_auth:landing_page') 
 
 # django-allauth에서 사용할 폼을 커스텀 폼으로 설정
 ACCOUNT_FORMS = {

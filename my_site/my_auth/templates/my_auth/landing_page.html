@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Langing Page{% endblock title %}
+{% block content %}
+<h1>Welcome to Our Site</h1>
+<a href="{% url 'account_login' %}">로그인</a>
+<a href="{% url 'account_signup' %}">회원가입</a>
+{% endblock %}

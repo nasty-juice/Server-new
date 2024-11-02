@@ -3,6 +3,10 @@ from my_app.models import CustomUser
 CustomUser.objects.get(email='jhshin0422@mju.ac.kr').delete()
 exit()
 
+from my_app.models import CustomUser
+CustomUser.objects.get(email='test@mju.ac.kr').delete()
+exit()
+
 
 # 전체 삭제
 from my_app.models import CustomUser

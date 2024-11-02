@@ -12,9 +12,12 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404
 import os
 
-# Create your views here.
-def initial_view(request):
-    return render(request, 'my_app/initial_view.html')
+from django.contrib.auth.decorators import login_required
+
+# HOME VIEW
+@login_required
+def home_view(request):
+    return render(request, 'my_app/home_view.html')
 
 class UserListView(ListView):
     model = CustomUser
@@ -28,12 +31,8 @@ class UserDetailView(DetailView):
     # <app_name>/<model_name>_detail.html
     context_object_name = 'user'
 
-# def redirect_to_auth_login(request):
-#     return redirect(reverse('my_auth:accounts/login'))
-
-# def redirect_to_auth_signup(request):
-#     return redirect(reverse('my_auth:accounts/signup'))
-    
+# STUDENT CARD IMAGE VIEW
+@login_required
 def private_media_view(request, file_path):
     print(file_path)
     file_path = os.path.join(settings.BASE_DIR, 'private_media', file_path)

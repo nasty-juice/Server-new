@@ -4,8 +4,8 @@ from . import views
 app_name = 'my_auth'
 
 urlpatterns = [
-    path('', views.initial_auth_view, name='initial_auth_view'),
     path('accounts/', include('allauth.urls')),
+    path('landing-page/', views.langing_page, name='landing_page'),
+    path('signup-success/', views.signup_success_view, name='signup_success_view'),
     path('student-card-auth/', views.StudentCardAuthView.as_view(), name='student_card_auth'),
-    
 ]

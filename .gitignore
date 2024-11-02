@@ -2,3 +2,4 @@ venv/
 .env             
 my_site/.env     
 my_site\.env
+private_media/

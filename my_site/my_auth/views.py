@@ -8,16 +8,20 @@ from my_app.models import CustomUser
 import os
 from django.core.files.base import ContentFile
 
-# Create your views here.
-def initial_auth_view(request):
-    return render(request, 'my_auth/initial_auth_view.html')
+from django.contrib.auth.decorators import login_required
 
+# Create your views here.
+@login_required
+def signup_success_view(request):
+    return render(request, 'my_auth/signup_success_view.html')
+def langing_page(request):
+    return render(request, 'my_auth/landing_page.html')
 class StudentCardAuthView(FormView):
 
     model = CustomUser
     form_class = StudentCardForm
     template_name = 'my_auth/student_card_auth_view.html'
-    success_url = reverse_lazy('my_auth:initial_auth_view')
+    success_url = reverse_lazy('my_auth:signup_success_view')
     
     def form_valid(self, form):
         print("Form is valid")

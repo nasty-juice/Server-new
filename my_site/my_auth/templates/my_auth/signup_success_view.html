@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}My Auth{% endblock title %}
 {% block content %}
-    <h1>my_auth Initial Auth View</h1>
-    <p>my_auth side</p>
+    <h1>회원가입 성공</h1>
+    <p>회원가입이 성공적으로 완료되었습니다.</p>
+    <a href="{% url 'my_auth:account_login' %}" >로그인 페이지로 이동</a>
     {% block sub %}
         {% comment %} # This is the sub block content {% endcomment %}
     {% endblock sub %}

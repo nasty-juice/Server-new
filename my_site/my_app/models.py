@@ -6,8 +6,6 @@ import os
 from .storages import PrivateMediaStorage
 
 def user_directory_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/private_media/<filename>
-    # return os.path.join(settings.PRIVATE_MEDIA_ROOT, 'private_media', filename)
     return os.path.join(settings.PRIVATE_MEDIA_ROOT, filename)
 
 class CustomUser(AbstractUser):
