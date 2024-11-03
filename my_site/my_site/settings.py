@@ -153,8 +153,8 @@ SITE_ID = 1  # 사용하는 사이트의 ID 설정
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # 이메일로 로그인하도록 설정
 LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정
