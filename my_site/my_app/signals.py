@@ -20,3 +20,18 @@
 #             move_to_private_media(instance, 'student_card_image')
 #         else:
 #             print("임시 파일 경로를 찾을 수 없습니다.")
+
+from django.dispatch import receiver
+from allauth.account.signals import email_confirmed
+from django.conf import settings
+from .models import CustomUser
+
+@receiver(email_confirmed)
+def update_email_verified_status(sender, request, email_address, **kwargs):
+    # Fetch the CustomUser instance associated with this email
+    user = CustomUser.objects.get(email=email_address.email)
+    
+    # Update the email_verified field to True
+    user.email_verified = True
+    user.save()
+

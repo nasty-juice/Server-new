@@ -3,7 +3,7 @@
 {% block content %}
 
     <h2>Sign Up</h2>
-    <form method="POST">
+    <form method="POST" action="{% url "my_auth:account_signup" %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Sign Up</button>
