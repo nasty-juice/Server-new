@@ -1,16 +1,33 @@
 import json
+import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import ChatMessage, ChatRoom
+from my_app.models import CustomUser
 from asgiref.sync import sync_to_async
 
 from django.core.exceptions import ObjectDoesNotExist
 
+logger = logging.getLogger(__name__)
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
-
+        self.user = self.scope["user"]
+        #사용자 인증 확인
+        if not self.user.is_authenticated:
+            logger.warning("로그인 페이지로 이동")
+            return
+        #사용자 방 권한 확인
+        try:
+            tryUser = await CustomUser.objects.get(user=self.user)
+            if tryUser.chatRoom != self.room_name:
+                logger.warning("방 권한이 없습니다.")
+                return
+        except CustomUser.DoesNotExist:
+            logger.warning("사용자가 존재하지 않습니다.")
+            return
+        
         # Join room group
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
@@ -45,16 +62,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_id = event["user_id"]
         user_name = event['user_name']
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({
-            "message": message, 
-            'user_id': user_id,
-            'user_name' : user_name,
-        }))
+        try:
+            await self.send(text_data=json.dumps({
+                "message": message, 
+                'user_id': user_id,
+                'user_name' : user_name,
+            }))
+        except Exception as e:
+            logger.warning(f"메시지 전송 실패: {e}")
     
     @sync_to_async
     def save_message(self, user_id, message):
-        chat_room = ChatRoom.objects.get(name=self.room_name)
-        ChatMessage.objects.create(chat_room=chat_room, user_id=user_id, message=message)
+        try:
+            chat_room = ChatRoom.objects.get(name=self.room_name)
+            ChatMessage.objects.create(chat_room=chat_room, user_id=user_id, message=message)
+        except ObjectDoesNotExist:
+            print(f"chatRoom '{self.room_name}' does not exist.")
     
     @sync_to_async
     def get_messages(self):
