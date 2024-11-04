@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'rest_framework',
+    
     # django-allauth apps
     'django.contrib.sites',
     'allauth',
@@ -167,8 +168,8 @@ DEFAULT_FROM_EMAIL = 'dev-jaehunshin@naver.com'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 (일 단위)
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BLUEBERRY 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
-# ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
+# ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
 ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
 
 # 1. 인증되지 않은 사용자는 이메일 인증 후 로그인 페이지로 리디렉션
@@ -187,7 +188,7 @@ LOGIN_URL = reverse_lazy('my_auth:landing_page')
 
 # django-allauth에서 사용할 폼을 커스텀 폼으로 설정
 ACCOUNT_FORMS = {
-    'signup': 'my_auth.forms.CustomUserCreationForm',
+    'signup': 'my_auth.forms.CustomSignupForm',
 }
 
 #채널 레이어
