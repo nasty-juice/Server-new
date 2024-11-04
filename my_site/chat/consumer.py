@@ -2,6 +2,7 @@ import json
 import logging
 
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from .models import ChatMessage, ChatRoom
 from my_app.models import CustomUser
 from asgiref.sync import sync_to_async
@@ -14,14 +15,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
         self.user = self.scope["user"]
+        
+        tryUser = await database_sync_to_async(self.get_user_by_username)(self.user.username)
         #사용자 인증 확인
         if not self.user.is_authenticated:
             logger.warning("로그인 페이지로 이동")
             return
-        #사용자 방 권한 확인
+
+        #사용자 방 권한 확인 - 이 부분 수정하기
         try:
-            tryUser = await CustomUser.objects.get(user=self.user)
-            if tryUser.chatRoom != self.room_name:
+            if str(tryUser.join_room) != str(self.room_name):
                 logger.warning("방 권한이 없습니다.")
                 return
         except CustomUser.DoesNotExist:
@@ -36,7 +39,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
         messages = await self.get_messages()
         print(messages)
         await self.send(text_data=json.dumps({'messages': messages}))
-        
+    
+    def get_user_by_username(self, username):
+        return CustomUser.objects.filter(username=username).first()
+    
     async def disconnect(self, close_code):
         # Leave room group
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
