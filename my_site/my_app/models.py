@@ -33,7 +33,9 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = 'email' # This field must be unique
     
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
-
+    
+    join_room = models.PositiveIntegerField(default=0)
+    
     def save(self, *args, **kwargs):
         if self.student_card_image:
             self.student_card_image.storage.location = settings.PRIVATE_MEDIA_ROOT
