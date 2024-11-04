@@ -25,7 +25,9 @@ urlpatterns = [
     path('my_app/', include('my_app.urls')),
     path('my_auth/', include('my_auth.urls')),
     path('', RedirectView.as_view(url='my_app/', permanent=True)),
-    
+
     path('accounts/', include('allauth.urls')),
     
+    path('match/', include('matching.urls')),
+    path('chat/', include('chat.urls'))
 ]

@@ -1,4 +1,5 @@
-venv/           
+venv/  
+ve/         
 .env             
 my_site/.env     
 my_site\.env

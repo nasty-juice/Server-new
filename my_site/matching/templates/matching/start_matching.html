@@ -1,0 +1,19 @@
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>매칭 서비스</title>
+</head>
+<body>
+    <h1>매칭 서비스</h1>
+    <form action="{% url 'start_matching' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit">매칭 시작</button>
+    </form>
+
+    <form action="{% url 'cancel_matching' %}" method="POST">
+        {% csrf_token %}
+        <button type="submit">매칭 취소</button>
+    </form>
+    <div id="message"></div>
+</body>
+</html>

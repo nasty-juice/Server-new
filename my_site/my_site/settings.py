@@ -38,6 +38,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    'rest_framework',
     # django-allauth apps
     'django.contrib.sites',
     'allauth',
@@ -53,9 +56,8 @@ INSTALLED_APPS = [
     # Custom apps
     'my_app.apps.MyAppConfig',
     'my_auth.apps.MyAuthConfig',
-    
-    'rest_framework',
-    
+    'chat',
+    'matching',
 ]
 
 MIDDLEWARE = [
@@ -156,7 +158,7 @@ LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
+#EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정
 EMAIL_USE_TLS = True # TLS 설정
 EMAIL_HOST_USER = 'dev-jaehunshin@naver.com'
@@ -186,4 +188,16 @@ LOGIN_URL = reverse_lazy('my_auth:landing_page')
 # django-allauth에서 사용할 폼을 커스텀 폼으로 설정
 ACCOUNT_FORMS = {
     'signup': 'my_auth.forms.CustomUserCreationForm',
+}
+
+#채널 레이어
+# Daphne
+ASGI_APPLICATION = "my_site.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
 }
