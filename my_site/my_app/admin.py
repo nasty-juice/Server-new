@@ -1,10 +1,8 @@
 from django.contrib import admin
-from .models import CustomUser
-from django.utils.html import format_html
-from django.conf import settings
 from django import forms
 
 from my_app.forms import AdminImageWidget
+from .models import CustomUser
 
 class CustomUserAdminForm(forms.ModelForm):
     class Meta:
@@ -13,6 +11,7 @@ class CustomUserAdminForm(forms.ModelForm):
         widgets = {
             'student_card_image': AdminImageWidget()
         }
+        
 class CustomUserAdmin(admin.ModelAdmin):
     
     form = CustomUserAdminForm

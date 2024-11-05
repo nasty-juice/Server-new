@@ -1,6 +1,7 @@
 from django.urls import path, include
 from . import views
 from rest_framework.routers import DefaultRouter
+from rest_framework.authtoken.views import obtain_auth_token
 
 app_name = 'my_auth'
 
@@ -10,11 +11,11 @@ router.register('signup', views.CustomSignupViewSet)
 
 urlpatterns = [
     path('accounts/', include('allauth.urls')),
-    # path('signup/', views.CustomSignupView.as_view(), name='account_signup'),
-    path('api/accounts/signup/', views.APICustomSignupView.as_view(), name='account_signup'),
     
-    path('', include(router.urls)),
-    
+    path('', include(router.urls)), # 회원가입 엔드포인트 /signup/ 을 위한 라우터
+    path('user/me/', views.UserDetailView.as_view(), name='user_detail'),   # 로그인한 사용자의 정보를 가져오는 엔드포인트 /my_auth/user/me/
+    path('token-login/', views.CustomLoginView.as_view(), name='token_login'), # Token Authentication 을 위한 로그인 엔드포인트 /my_auth/api-token-auth/
+
     path('temp/', views.temp_view, name='temp_view'),
     path('temp/class/', views.TempClassView.as_view(), name='temp_class_view'),
     

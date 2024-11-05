@@ -4,13 +4,15 @@ from django.utils.decorators import method_decorator
 from django.views.generic import CreateView, ListView, DetailView, UpdateView, DeleteView, View, FormView
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
 
 from allauth.account.views import SignupView
 from allauth.account.utils import send_email_confirmation
 
-from rest_framework.permissions import AllowAny
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -18,11 +20,67 @@ from rest_framework import status
 from rest_framework import viewsets
 
 from my_app.models import CustomUser
-from .forms import CustomSignupForm
 from .serializers import CustomSignupSerializer
+from .forms import CustomSignupForm
 from .utils import perform_ocr, get_unknown_fields
 
+class UserPasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+        
+        if not user.check_password(old_password):
+            return Response({"error": "Invalid password"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
+# 내 정보 가져오기
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]      # 로그인한 사용자만 접근 가능
+    
+    def get(self, request):
+        user = request.user
+        serializer = CustomSignupSerializer(user)
+        response_data = {
+            # "id" : serializer.data["id"], # 서버에서 pk id 전송 필요 없음.
+            "username" : serializer.data["username"],
+            "email" : serializer.data["email"],
+            "student_number" : serializer.data["student_number"],
+            "student_name" : serializer.data["student_name"],
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+# 로그인
+class CustomLoginView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        print(email, password)
+        # 이메일로 사용자를 인증
+        try:
+            user = CustomUser.objects.get(email=email)
+            
+            # 이메일 인증 여부 확인
+            if not user.email_verified:
+                return Response({"error": "Email not verified"}, status=status.HTTP_403_FORBIDDEN)
+            
+            # 비밀번호를 직접 검증
+            if user.check_password(password):  # 비밀번호가 맞으면 True 반환
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({"token": token.key}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        except CustomUser.DoesNotExist:
+            return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
+
+# 회원가입
 class CustomSignupViewSet(viewsets.ModelViewSet):
     serializer_class = CustomSignupSerializer
     queryset = CustomUser.objects.all()
@@ -35,11 +93,15 @@ class CustomSignupViewSet(viewsets.ModelViewSet):
         # 이메일 인증 링크 전송
         send_email_confirmation(request, user)
         
+        response_data = {
+            "email" : serializer.data["email"],
+            "student_number" : serializer.data["student_number"],
+            "student_name" : serializer.data["student_name"],
+        }
+        
         headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        
-        
-        
+        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
+    
 # Create your views here.
 @login_required
 def signup_success_view(request):
@@ -60,29 +122,6 @@ class TempClassView(APIView):
     def post(self, request):
         print(request.data)
         return Response({"message": "Hello, World!"}, status=status.HTTP_200_OK)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class APICustomSignupView(APIView):
-    permission_classes = [AllowAny]
-
-    model = CustomUser
-    form_class = CustomSignupForm
-
-    def post(self, request):
-        print("request.data: ", request.data)
-        print("request.post: ", request.POST)
-        print("request.files: ", request.FILES)
-
-        # form = CustomSignupForm(request.data)
-        
-        return Response({"message": "Hello, World!"}, status=status.HTTP_200_OK)
-    
-        if form.is_valid():
-            # user = form.save(request)
-            print(form.cleaned_data)
-            return Response({"message": "User created successfully."}, status=status.HTTP_201_CREATED)
-        else:
-            return Response({"error": form.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomSignupView(SignupView):
     model = CustomUser
