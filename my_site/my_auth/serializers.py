@@ -3,7 +3,7 @@ from my_app.models import CustomUser
 from .utils import perform_ocr, get_unknown_fields
 
 class CustomSignupSerializer(serializers.ModelSerializer):
-    # student_card_image = serializers.ImageField(required=True)
+    student_card_image = serializers.ImageField(required=True)
     
     class Meta:
         model = CustomUser
