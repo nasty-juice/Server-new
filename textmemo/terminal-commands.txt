@@ -18,3 +18,8 @@ user = CustomUser.objects.get(email='  ')
 user.student_image = None
 user.student_data = None
 user.save() 
+
+# superuser 열람
+from my_app.models import CustomUser
+superusers = CustomUser.objects.filter(is_superuser=True)
+print(superusers)
