@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.urls.conf import include
 from django.views.generic.base import RedirectView
-
+from .views import get_csrf_token
 urlpatterns = [
     path('admin/', admin.site.urls),
     
@@ -27,6 +27,7 @@ urlpatterns = [
     path('', RedirectView.as_view(url='my_app/', permanent=True)),
 
     path('accounts/', include('allauth.urls')),
+    path('accounts/csrf/', get_csrf_token , name='get_csrf_token'),
     
     path('match/', include('matching.urls')),
     path('chat/', include('chat.urls'))

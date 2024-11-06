@@ -26,6 +26,7 @@ class CustomUser(AbstractUser):
     student_card_image = models.ImageField(storage=PrivateMediaStorage() ,upload_to = 'student_cards/', blank=True, null=True)
     student_card_data = models.JSONField(blank=True, null=True, default=dict)
 
+    department = models.CharField(max_length=50, blank=True, null=False)
     
     is_waiting = models.BooleanField(default=False)
     is_valid_student = models.BooleanField(default=False)

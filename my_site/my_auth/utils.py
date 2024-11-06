@@ -13,7 +13,7 @@ def parse_text(text_data):
     text_data = {
         "student_id": re.search(r"학번\s+(\d+)", text_data).group(1) if re.search(r"학번\s+(\d+)", text_data) else "unknown",
         "korean_name": re.search(r"한글성명\s+(\S+)", text_data).group(1) if re.search(r"한글성명\s+(\S+)", text_data) else "unknown",
-        "year": re.search(r"학년\s+(\d+학년)", text_data).group(1) if re.search(r"학년\s+(\d+학년)", text_data) else "unknown",
+        "grade": re.search(r"학년\s+(\d+학년)", text_data).group(1) if re.search(r"학년\s+(\d+학년)", text_data) else "unknown",
         "status": re.search(r"학적상태\s+(\S+)", text_data).group(1) if re.search(r"학적상태\s+(\S+)", text_data) else "unknown",
         "department": re.search(r"학부\(과\)\s+(\S+)", text_data).group(1) if re.search(r"학부\(과\)\s+(\S+)", text_data) else "unknown",
         "phone_number": re.search(r"전화번호\*\s+([\d-]+)", text_data).group(1) if re.search(r"전화번호\*\s+([\d-]+)", text_data) else "unknown",

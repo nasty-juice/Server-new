@@ -32,14 +32,17 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["192.168.0.208", "192.168.0.31", "192.168.65.85", "127.0.0.1"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
+
     'daphne',
     'channels',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,7 +50,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    
+    # rest_framework apps
     'rest_framework',
+    'rest_framework.authtoken',
+    
     
     # django-allauth apps
     'django.contrib.sites',
@@ -71,6 +78,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
     'allauth.account.middleware.AccountMiddleware',  # django-allauth middleware 추가
+
+    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 추가
 ]
 
 ROOT_URLCONF = 'my_site.urls'
@@ -168,8 +177,8 @@ DEFAULT_FROM_EMAIL = 'dev-jaehunshin@naver.com'
 
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1  # 이메일 인증 메일의 유효 기간 설정 (일 단위)
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[ BLUEBERRY 이메일 인증 ]'  # 이메일 제목에 붙는 접두사 설정
-# ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
-ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # 이메일 인증을 필수로 설정
+# ACCOUNT_EMAIL_VERIFICATION = 'optional'  # 이메일 인증을 선택사항으로 설정
 ACCOUNT_EMAIL_REQUIRED = True  # 이메일을 필수로 입력하게 설정
 
 # 1. 인증되지 않은 사용자는 이메일 인증 후 로그인 페이지로 리디렉션
@@ -190,6 +199,33 @@ LOGIN_URL = reverse_lazy('my_auth:landing_page')
 ACCOUNT_FORMS = {
     'signup': 'my_auth.forms.CustomSignupForm',
 }
+
+
+
+
+# CORS 설정
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://192.168.0.31",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://192.168.0.31",
+]
+
+# REST framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+
+
+
 
 #채널 레이어
 # Daphne
