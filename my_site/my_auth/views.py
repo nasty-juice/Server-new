@@ -24,6 +24,24 @@ from .serializers import CustomSignupSerializer
 from .forms import CustomSignupForm
 from .utils import perform_ocr, get_unknown_fields
 
+# 회원탈퇴
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        user = request.user
+        user.delete()
+        return Response({"message": "User deleted successfully"}, status=status.HTTP_200_OK)
+
+# 로그아웃
+class UserLogoutView(APIView):
+    permission_classes = [IsAuthenticated]      # 로그인한 사용자만 접근 가능
+    
+    def post(self, request):
+        request.user.auth_token.delete()
+        return Response({"message": "User logged out successfully"}, status=status.HTTP_200_OK)
+
+# 비밀번호 변경
 class UserPasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
     
