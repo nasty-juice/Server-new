@@ -12,9 +12,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from decouple import config
 from pathlib import Path
 import os
+
+
+BACKEND_ADDRESS = "192.168.0.5"
+FRONTEND_ADDRESS = "192.168.0.12"
+
+BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
+FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_URL = "http://127.0.0.1:8000"
+# BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = BACKEND_URL
 # Media files (uploads) settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 프로젝트 루트에 'media/' 디렉토리 설정
@@ -32,36 +42,38 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.0.208", "192.168.0.31", "192.168.65.85", "127.0.0.1"]
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, ]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'corsheaders',
-
+    # Channels 관련 앱
     'daphne',
     'channels',
 
+    # Django 기본 앱
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     
-    
-    # rest_framework apps
+    # CORS 헤더 설정
+    'corsheaders',
+
+    # Django REST framework 및 관련 인증 앱
     'rest_framework',
     'rest_framework.authtoken',
     
-    
-    # django-allauth apps
+    # django-allauth와 관련 앱
     'django.contrib.sites',
     'allauth',
     'allauth.account',
-    
-    # Custom apps
+
+    # 커스텀 앱
     'my_app.apps.MyAppConfig',
     'my_auth.apps.MyAuthConfig',
     'chat',
@@ -69,6 +81,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 추가
+    'allauth.account.middleware.AccountMiddleware',  # django-allauth middleware 추가
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,9 +92,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
-    'allauth.account.middleware.AccountMiddleware',  # django-allauth middleware 추가
 
-    'corsheaders.middleware.CorsMiddleware', # CORS 미들웨어 추가
 ]
 
 ROOT_URLCONF = 'my_site.urls'
@@ -206,11 +219,11 @@ ACCOUNT_FORMS = {
 # CORS 설정
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://192.168.0.31",
+    FRONTEND_URL,
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://192.168.0.31",
+    FRONTEND_URL,
 ]
 
 # REST framework settings

@@ -70,12 +70,14 @@ class UserDetailView(APIView):
             "username" : serializer.data["username"],
             "email" : serializer.data["email"],
             "student_number" : serializer.data["student_number"],
-            "student_name" : serializer.data["student_name"],
+            "department" : serializer.data["department"],
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
 # 로그인
+# @method_decorator(csrf_exempt, name='dispatch')
 class CustomLoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
@@ -99,11 +101,16 @@ class CustomLoginView(APIView):
             return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
 
 # 회원가입
+# @method_decorator(csrf_exempt, name='dispatch')
 class CustomSignupViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
     serializer_class = CustomSignupSerializer
     queryset = CustomUser.objects.all()
 
     def create(self, request, *args, **kwargs):
+        
+        print(request.data)
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -114,7 +121,8 @@ class CustomSignupViewSet(viewsets.ModelViewSet):
         response_data = {
             "email" : serializer.data["email"],
             "student_number" : serializer.data["student_number"],
-            "student_name" : serializer.data["student_name"],
+            "username" : serializer.data["username"],
+            
         }
         
         headers = self.get_success_headers(serializer.data)
