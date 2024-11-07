@@ -110,6 +110,8 @@ class CustomSignupViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         
         print(request.data)
+        print(request.POST)
+        print(request.FILES)
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

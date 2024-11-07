@@ -4,12 +4,13 @@ from my_app.models import CustomUser
 from .utils import perform_ocr, get_unknown_fields
 
 class CustomSignupSerializer(serializers.ModelSerializer):
-    # student_card_image = serializers.ImageField(required=True)
+    student_card_image = serializers.ImageField(required=True)
     
     class Meta:
         model = CustomUser
         # fields = ('username', 'email', 'password', 'student_number', 'student_card_image', 'department')
-        fields = ('username','email', 'password', 'student_number')
+        fields = ('username', 'email', 'password', 'student_number', 'student_card_image')
+        # fields = ('username','email', 'password', 'student_number')
         extra_kwargs = {'password': {'write_only': True}}
     
     def create(self, validated_data):
@@ -27,10 +28,10 @@ class CustomSignupSerializer(serializers.ModelSerializer):
                 
                 print(user)
                 # 학생증 이미지 처리
-                # student_card_image = validated_data.get('student_card_image')
-                # if student_card_image:
-                #     new_filename = f"{user.student_number}_student_card.jpg"
-                #     user.student_card_image.save(new_filename, student_card_image)
+                student_card_image = validated_data.get('student_card_image')
+                if student_card_image:
+                    new_filename = f"{user.student_number}_student_card.jpg"
+                    user.student_card_image.save(new_filename, student_card_image)
                     
                 #     # OCR 처리
                 #     clean_dict = perform_ocr(student_card_image)
