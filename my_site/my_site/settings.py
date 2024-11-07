@@ -14,8 +14,8 @@ from pathlib import Path
 import os
 
 
-BACKEND_ADDRESS = "192.168.0.5"
-FRONTEND_ADDRESS = "192.168.0.12"
+BACKEND_ADDRESS = "192.168.0.208"
+FRONTEND_ADDRESS = "192.168.0.10"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
@@ -178,10 +178,10 @@ SITE_ID = 1  # 사용하는 사이트의 ID 설정
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # 이메일로 로그인하도록 설정
 LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-#EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
+EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정
 EMAIL_USE_TLS = True # TLS 설정
 EMAIL_HOST_USER = 'dev-jaehunshin@naver.com'
@@ -217,13 +217,16 @@ ACCOUNT_FORMS = {
 
 
 # CORS 설정
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
+    BACKEND_URL,
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     FRONTEND_URL,
+    BACKEND_URL,
 ]
 
 # REST framework settings
