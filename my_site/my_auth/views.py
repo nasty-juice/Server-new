@@ -147,6 +147,8 @@ def temp_view(request):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TempClassView(APIView):
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         print(request.data)
         return Response({"message": "Hello, World!"}, status=status.HTTP_200_OK)
