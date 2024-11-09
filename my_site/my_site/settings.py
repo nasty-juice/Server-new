@@ -13,10 +13,11 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_ADDRESS = "2e86-125-191-254-69.ngrok-free.app"
+NGROK_ADDRESS = "d9c7-125-191-254-69.ngrok-free.app"
+NGROK_URL = "https://" + NGROK_ADDRESS
 
 BACKEND_ADDRESS = "127.0.0.1"
-FRONTEND_ADDRESS = "172.20.10.7"
+FRONTEND_ADDRESS = "192.168.35.183"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
@@ -43,7 +44,7 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, NGROK_ADDRESS]
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app']
 
 
 # Application definition
@@ -223,12 +224,17 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
     BACKEND_URL,
+    NGROK_URL,
 ]
 
+
+# CSRF 설정
 CSRF_TRUSTED_ORIGINS = [
     FRONTEND_URL,
     BACKEND_URL,
+    NGROK_URL,
 ]
+
 
 # REST framework settings
 REST_FRAMEWORK = {

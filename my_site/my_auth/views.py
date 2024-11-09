@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
 from django.core.files.base import ContentFile
+from django.db import transaction, IntegrityError
 
 from allauth.account.views import SignupView
 from allauth.account.utils import send_email_confirmation
@@ -70,7 +71,7 @@ class UserDetailView(APIView):
             "username" : serializer.data["username"],
             "email" : serializer.data["email"],
             "student_number" : serializer.data["student_number"],
-            "department" : serializer.data["department"],
+            "department" : serializer.data["department"]
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -101,7 +102,7 @@ class CustomLoginView(APIView):
             return Response({"error": "Invalid email or password"}, status=status.HTTP_401_UNAUTHORIZED)
 
 # 회원가입
-# @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomSignupViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     serializer_class = CustomSignupSerializer
@@ -153,16 +154,19 @@ class TempClassView(APIView):
         print(request.data)
         return Response({"message": "Hello, World!"}, status=status.HTTP_200_OK)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomSignupView(SignupView):
     model = CustomUser
     form_class = CustomSignupForm
+    template_name = 'signup.html'
     
+    @transaction.atomic
     def form_valid(self, form):
         print("Form is valid")
-        
         user = form.save(commit=False)
         
         try:
+            
             student_card_image = form.cleaned_data.get('student_card_image')
             print("Student card image retrieved from form")
             
@@ -188,13 +192,17 @@ class CustomSignupView(SignupView):
             
             user.student_card_data = clean_dict
             user.save()
-            print(user.student_card_image.name, user.student_card_image.path)
-            print("User saved successfully")
+            print("User saved successfully")    
             
             
         except Exception as e:
             print(f"Error during image processing: {e}")
             form.add_error('student_card_image', f'이미지 처리 중 오류가 발생했습니다: {e}')
+            return self.form_invalid(form)
+
+        except IntegrityError as e:
+            print(f"Integrity error: {e}")
+            form.add_error('student_number', '이미 등록된 학번입니다.')
             return self.form_invalid(form)
 
         return super().form_valid(form)
