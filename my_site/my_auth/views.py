@@ -154,6 +154,7 @@ class TempClassView(APIView):
         print(request.data)
         return Response({"message": "Hello, World!"}, status=status.HTTP_200_OK)
 
+# 웹으로 회원가입
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomSignupView(SignupView):
     model = CustomUser

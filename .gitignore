@@ -1,6 +1,11 @@
 venv/  
-ve/         
+ve/   
+
 .env             
 my_site/.env     
 my_site\.env
+
 private_media/
+
+# Ignore the database
+db.sqlite3
