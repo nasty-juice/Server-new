@@ -33,7 +33,7 @@ def get_unknown_fields(data):
     Returns:
         list: 'unknown' 값을 가진 키의 목록
     """
-    unknown_fields = [key for key, value in data.items() if value == "unknown"]
+    unknown_fields = [key for key, value in data.items() if key in ["student_id", "korean_name", "status", "department"] and value == "unknown"]
     return unknown_fields
 
 # Tesseract 실행 파일 경로 설정 (윈도우 사용자만 필요)

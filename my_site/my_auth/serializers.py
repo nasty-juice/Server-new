@@ -27,32 +27,33 @@ class CustomSignupSerializer(serializers.ModelSerializer):
                 user.save()
                 
                 print(user)
-                # 학생증 이미지 처리
+                # 학생카드 이미지 처리
                 student_card_image = validated_data.get('student_card_image')
                 if student_card_image:
                     new_filename = f"{user.student_number}_student_card.jpg"
                     user.student_card_image.save(new_filename, student_card_image)
                     
                 #     # OCR 처리
-                #     clean_dict = perform_ocr(student_card_image)
-                #     print("clean dict: ", clean_dict)
+                    clean_dict = perform_ocr(student_card_image)
+                    print("clean dict: ", clean_dict)
 
-                #     unknown_fields = get_unknown_fields(clean_dict)
-                #     if unknown_fields:
-                #         raise serializers.ValidationError(f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
-                #     user.student_card_data = clean_dict
+                    unknown_fields = get_unknown_fields(clean_dict)
+                    if unknown_fields:
+                        raise serializers.ValidationError(f"학생카드 인식에 실패한 항목: {', '.join(unknown_fields)}")
+                    user.student_card_data = clean_dict
 
 
-                # if user.student_card_data.get('student_id') != user.student_number:
-                #     raise serializers.ValidationError("학번과 학생증 학번이 일치하지 않습니다.")
+                if user.student_card_data.get('student_id') != user.student_number:
+                    raise serializers.ValidationError("학번과 학생카드 학번이 일치하지 않습니다.")
                 
-                # if user.student_card_data.get('korean_name') != user.username:
-                #     raise serializers.ValidationError("이름과 학생증 이름이 일치하지 않습니다.")
+                if user.student_card_data.get('korean_name') != user.username:
+                    raise serializers.ValidationError("이름과 학생카드 이름이 일치하지 않습니다.")
                 
-                # if user.student_card_data.get('status') != "재학":
-                #     raise serializers.ValidationError("재학생이 아닙니다.")
+                if user.student_card_data.get('status') != "재학":
+                    raise serializers.ValidationError("재학생이 아닙니다.")
                 
-                # user.department = user.student_card_data.get('department')
+                user.enrolled_student = True
+                user.department = user.student_card_data.get('department')
                 user.save()
                 
             return user
