@@ -68,7 +68,7 @@ INSTALLED_APPS = [
 
     # Django REST framework 및 관련 인증 앱
     'rest_framework',
-    'rest_framework.authtoken',
+    #'rest_framework.authtoken',
     
     # django-allauth와 관련 앱
     'django.contrib.sites',

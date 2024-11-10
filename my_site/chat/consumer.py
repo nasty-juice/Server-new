@@ -1,15 +1,27 @@
 import json
 import logging
+import os
 
+from cryptography.fernet import Fernet
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import ChatMessage, ChatRoom
 from my_app.models import CustomUser
 from asgiref.sync import sync_to_async
-
 from django.core.exceptions import ObjectDoesNotExist
+from dotenv import load_dotenv
+
+# .env 파일을 로드
+load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# 비밀 키 설정
+secret_key = os.getenv("SECRET_KEY").encode()
+if secret_key is None:
+    raise ValueError("No SECRET_KEY")
+cipher_suite = Fernet(secret_key)
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
@@ -32,13 +44,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
         
         # Join room group
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.channel_layer.group_add(
+            self.room_group_name, 
+            self.channel_name
+        )
+        # 웹 소켓 접속 승인
         await self.accept()
 
         #방에 있는 기존 메시지 불러오기
         messages = await self.get_messages()
-        print(messages)
-        await self.send(text_data=json.dumps({'messages': messages}))
+        decrypted_messages = []
+        for message in messages:
+            try:
+                print(f"암호화된 메시지: {message['message']}")
+                #메시지가 바이트 형식인지 확인 
+                if isinstance(message['message'], str):
+                    encrypted_message = message['message']
+                else:
+                    encrypted_message = message['message'].encode()
+                    
+                decrypted_message = cipher_suite.decrypt(encrypted_message).decode()
+                #decrypted_message = message['message']
+                decrypted_messages.append({
+                    'user_id' : message["user_id"],
+                    'user_name' : message["user_name"],
+                    'message' : decrypted_message
+                })
+                print(f"복호화된 메시지: {decrypted_message}")
+            except Exception as e:
+                logger.warning(f"메시지 복호화 실패: {e}")
+    
+        await self.send(text_data=json.dumps({'messages': decrypted_messages}))
     
     def get_user_by_username(self, username):
         return CustomUser.objects.filter(username=username).first()
@@ -54,12 +90,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_id = text_data_json['user_id']
         user_name = text_data_json['user_name']
 
+        encrypted_message = cipher_suite.encrypt(message.encode())
         #메시지를 서버에 저장
-        await self.save_message(user_id, message)
+        await self.save_message(user_id, encrypted_message)
         
         # Send message to room group
         await self.channel_layer.group_send(
-            self.room_group_name, {"type": 'chat.message', "message": message, 'user_id' : user_id, 'user_name' : user_name}
+            self.room_group_name, {"type": 'chat.message', "message": encrypted_message, 'user_id' : user_id, 'user_name' : user_name}
         )
 
     # Receive message from room group
@@ -68,9 +105,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_id = event["user_id"]
         user_name = event['user_name']
         # Send message to WebSocket
+        print(f"message : {message}")
+        decrypted_message = cipher_suite.decrypt(message).decode()
         try:
             await self.send(text_data=json.dumps({
-                "message": message, 
+                "message": decrypted_message, 
                 'user_id': user_id,
                 'user_name' : user_name,
             }))
