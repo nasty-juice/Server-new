@@ -12,7 +12,7 @@ class ChatRoom(models.Model):
 class ChatMessage(models.Model):
     chat_room = models.ForeignKey(ChatRoom, related_name='messages', on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    message = models.TextField()
+    message = models.BinaryField()
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
