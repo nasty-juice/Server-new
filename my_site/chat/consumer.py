@@ -35,7 +35,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if not self.user.is_authenticated:
             logger.warning("로그인 페이지로 이동")
             return
-
+        
         #사용자 방 권한 확인
         try:
             if str(tryUser.join_room) != str(self.room_name):
@@ -50,6 +50,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name, 
             self.channel_name
         )
+        
         # 웹 소켓 접속 승인
         await self.accept()
 
@@ -58,10 +59,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         decrypted_messages = []
         for message in messages:
             try:
-                #encoded_message = message['message']
-                #encrypted_message = base64.b64decode(encoded_message)
                 encrypted_message = message['message']
-                #decrypted_message = encrypted_message
                 decrypted_message = private_key.decrypt(
                     encrypted_message,
                     padding.OAEP(
