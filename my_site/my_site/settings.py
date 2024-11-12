@@ -13,11 +13,11 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_ADDRESS = "d9c7-125-191-254-69.ngrok-free.app"
+NGROK_ADDRESS = "9e90-202-30-111-171.ngrok-free.app"
 NGROK_URL = "https://" + NGROK_ADDRESS
 
 BACKEND_ADDRESS = "127.0.0.1"
-FRONTEND_ADDRESS = "192.168.35.183"
+FRONTEND_ADDRESS = "192.168.0.37"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
@@ -225,6 +225,13 @@ CORS_ALLOWED_ORIGINS = [
     FRONTEND_URL,
     BACKEND_URL,
     NGROK_URL,
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'origin',
 ]
 
 
