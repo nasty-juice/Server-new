@@ -29,4 +29,3 @@ def delete_user_image(sender, instance, **kwargs):
         except Exception as e:
             # 예외 발생 시 로그를 남기거나 오류 처리
             print(f"Error deleting image: {e}")
-

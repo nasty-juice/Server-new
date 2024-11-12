@@ -9,7 +9,7 @@ class MatchingQueue(models.Model):
     
     def __str__(self):
         return self.name
-
+    
 class UserGroup(models.Model):
     name = models.CharField(max_length=100, blank=True)
     users = models.ManyToManyField(CustomUser, blank=True)

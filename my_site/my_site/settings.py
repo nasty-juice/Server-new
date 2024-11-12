@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'my_auth.apps.MyAuthConfig',
     'chat',
     'matching',
+    'taxi_matching.apps.TaxiMatchingConfig',
 ]
 
 MIDDLEWARE = [
