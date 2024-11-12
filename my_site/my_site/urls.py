@@ -33,5 +33,5 @@ urlpatterns = [
     
     path('match/', include('matching.urls')),
     path('chat/', include('chat.urls')),
-    path('taxi-match/', include('taxi_matching.urls')),
+    path('taxi_matching/', include('taxi_matching.urls')),
 ]
