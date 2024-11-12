@@ -1,30 +1,12 @@
-# # signals.py
-# from django.db.models.signals import post_save
-# from django.dispatch import receiver
-# from .models import CustomUser
-# from .utils import move_to_private_media
-# from django.conf import settings
-# import os
-
-# @receiver(post_save, sender=CustomUser)
-# def post_save_custom_user(sender, instance, **kwargs):
-#     if instance.student_card_image:
-#         # 이미지 파일이 PRIVATE_MEDIA_ROOT에 이미 있는지 확인
-#         current_path = instance.student_card_image.path
-#         if settings.PRIVATE_MEDIA_ROOT in current_path:
-#             print("이미 파일이 PRIVATE_MEDIA_ROOT에 있습니다.")
-#             return  # 파일이 이미 옮겨진 경우 중복 처리 방지
-
-#         # 임시 경로에 파일이 있는 경우에만 이동
-#         if os.path.exists(current_path):
-#             move_to_private_media(instance, 'student_card_image')
-#         else:
-#             print("임시 파일 경로를 찾을 수 없습니다.")
-
 from django.dispatch import receiver
-from allauth.account.signals import email_confirmed
 from django.conf import settings
+from django.db.models.signals import post_delete
+
+from allauth.account.signals import email_confirmed
+
 from .models import CustomUser
+
+import os
 
 @receiver(email_confirmed)
 def update_email_verified_status(sender, request, email_address, **kwargs):
@@ -34,4 +16,17 @@ def update_email_verified_status(sender, request, email_address, **kwargs):
     # Update the email_verified field to True
     user.email_verified = True
     user.save()
+    
+@receiver(post_delete, sender=CustomUser)
+def delete_user_image(sender, instance, **kwargs):
+    # 사용자 이미지가 있을 경우 삭제
+    if instance.student_card_image:
+        try:
+            # 이미지 파일 경로 가져오기
+            image_path = instance.student_card_image.path
+            if os.path.isfile(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            # 예외 발생 시 로그를 남기거나 오류 처리
+            print(f"Error deleting image: {e}")
 
