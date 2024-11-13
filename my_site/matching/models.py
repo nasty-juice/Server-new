@@ -10,13 +10,13 @@ class MatchingQueue(models.Model):
     def __str__(self):
         return self.name
 
-class UserGroup(models.Model):
-    name = models.CharField(max_length=100, blank=True)
-    users = models.ManyToManyField(CustomUser, blank=True)
+# 유저가 거절 누르면 바로 대기가 풀어지는지, 시간 기다리는지 확인하기
+
+#매칭 임시 그룹 - 수락 누르면 대화방 권한 주는걸로
+class MatchRequest(models.Model):
+    location_name = models.CharField(max_length=100)
+    confirm_users = models.ManyToManyField(CustomUser, related_name='confirm_group',blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     
-    class Meta:
-        ordering = ['created_at']
-    
-    def __str__(self):
-        return f'Group {self.id}'
+#완성된 4명에 대한 로직도 구현해야함

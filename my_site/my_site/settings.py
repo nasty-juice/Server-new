@@ -215,9 +215,6 @@ ACCOUNT_FORMS = {
     'signup': 'my_auth.forms.CustomSignupForm',
 }
 
-
-
-
 # CORS 설정
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True
@@ -227,7 +224,6 @@ CORS_ALLOWED_ORIGINS = [
     NGROK_URL,
 ]
 
-
 # CSRF 설정
 CSRF_TRUSTED_ORIGINS = [
     FRONTEND_URL,
@@ -235,20 +231,15 @@ CSRF_TRUSTED_ORIGINS = [
     NGROK_URL,
 ]
 
-
 # REST framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
+        #'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
-
-
-
-
 
 #채널 레이어
 # Daphne

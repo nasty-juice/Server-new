@@ -26,23 +26,35 @@ with open(private_key_path, "rb") as f:
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
-        self.room_group_name = f"chat_{self.room_name}"
+        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
+        self.room_group_name = f"chat_{self.room_id}"
         self.user = self.scope["user"]
         
-        tryUser = await database_sync_to_async(self.get_user_by_username)(self.user.username)
+        try:
+            tryUser = await database_sync_to_async(self.get_user_by_number)(self.user.student_number)
+        except CustomUser.DoesNotExist:
+            logger.warning("사용자가 존재하지 않습니다.")
+            await self.close()
+            return
+
         #사용자 인증 확인
         if not self.user.is_authenticated:
             logger.warning("로그인 페이지로 이동")
+            await self.close()
             return
-        
+
         #사용자 방 권한 확인
+        tryUser_join_room = await sync_to_async(lambda: tryUser.join_room)()
+        checkUser_join_room = await sync_to_async(lambda: self.user.join_room)()
+        
         try:
-            if str(tryUser.join_room) != str(self.room_name):
+            if tryUser_join_room != checkUser_join_room:
                 logger.warning("방 권한이 없습니다.")
+                await self.close()
                 return
-        except CustomUser.DoesNotExist:
-            logger.warning("사용자가 존재하지 않습니다.")
+        except AttributeError:
+            logger.warning("사용자가 방에 속해있지 않습니다.")
+            await self.close()
             return
         
         # Join room group
@@ -80,8 +92,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 
         await self.send(text_data=json.dumps({'messages': decrypted_messages}))
     
-    def get_user_by_username(self, username):
-        return CustomUser.objects.filter(username=username).first()
+    def get_user_by_number(self, number):
+        return CustomUser.objects.filter(student_number=number).first()
     
     async def disconnect(self, close_code):
         # Leave room group
@@ -154,7 +166,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def save_message(self, user_id, message):
         try:
-            chat_room = ChatRoom.objects.get(name=self.room_name)
+            chat_room = ChatRoom.objects.get(id=self.room_id)
             ChatMessage.objects.create(chat_room=chat_room, user_id=user_id, message=message)
         except ObjectDoesNotExist:
             print(f"chatRoom '{self.room_name}' does not exist.")
@@ -162,7 +174,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def get_messages(self):
         try:
-            chat_room = ChatRoom.objects.get(name = self.room_name)
+            chat_room = ChatRoom.objects.get(id = self.room_id)
             messages = ChatMessage.objects.filter(chat_room=chat_room).order_by('created_at')
             print(f'chatRoom Num : {chat_room.name}')
             

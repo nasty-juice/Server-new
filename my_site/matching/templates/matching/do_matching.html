@@ -1,0 +1,68 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Chat Room</title>
+</head>
+<body>
+    <h1>{{ location }}</h1>
+    <div id="match-buttons" style="display: none;">
+        <button id="accept-button">매칭 수락</button>
+        <button id="reject-button">매칭 거절</button>
+    </div>
+    <script>
+        const user_location = "{{ location }}"; //ex : 학관
+        const student_number = "{{ user.student_number }}";//ex : 6021XXXX
+        const userName = "{{user.username}}"; //ex : yoon
+        const action = "{{ action }}"; // 행동 값
+        const decodedUserName = decodeURIComponent(userName);
+        
+        const chatSocket = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/matching/'
+            + decodedUserName
+            + '/'
+        );
+        
+        chatSocket.onopen = function(e) {
+            chatSocket.send(JSON.stringify({
+                'location' : user_location,
+                'student_number' : student_number,
+                'user_name' : userName,
+                'action' : action,
+            }));
+            console.log('Connection opened');
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly : ', e);
+        };
+
+        chatSocket.onerror = function(e){
+            console.error('WebSocket error : ' , e);
+        };
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log(data);
+            if(data.status == 'matched'){
+                document.getElementById("match-buttons").style.display = "block";
+            }
+        };
+
+        document.getElementById("accept-button").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'action': 'accept_match',
+                'student_number': student_number,
+            }));
+        };
+
+        document.getElementById("reject-button").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'action': 'reject_match',
+                'student_number': student_number,
+            }));
+        };
+    </script>
+</body>
+</html>

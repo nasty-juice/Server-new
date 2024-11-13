@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from chat.models import ChatRoom
 from django.contrib.auth.models import AbstractUser
 import uuid
 import os
@@ -35,7 +36,7 @@ class CustomUser(AbstractUser):
     
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
     
-    join_room = models.PositiveIntegerField(default=0)
+    join_room = models.ForeignKey(ChatRoom, related_name='users', on_delete=models.SET_NULL, blank=True, null=True)
     
     def save(self, *args, **kwargs):
         if self.student_card_image:

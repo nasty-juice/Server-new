@@ -4,13 +4,13 @@
     <title>Chat Room</title>
 </head>
 <body>
-    <h1>{{ room_name }}</h1>
+    <h1>{{ room_id }}</h1>
     <textarea id="chat-log" cols="100" rows="20"></textarea><br>
     <input id="chat-message-input" type="text" size="100"><br>
     <input id="chat-message-submit" type="button" value="Send">
-
+    {% comment %} GET: 이름, 학번, 메시지, 시간 {% endcomment %}
     <script>
-        const roomName = "{{ room_name }}";
+        const roomName = "{{ room_id }}";
         const userId = "{{ user.id }}";//ex : 21
         const userName = "{{user.username}}"; //ex : yoon
         const chatSocket = new WebSocket(
