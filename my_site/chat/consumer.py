@@ -27,15 +27,20 @@ with open(private_key_path, "rb") as f:
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.room_group_name = f"chat_{self.room_id}"
+        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.room_group_name = f"chat_{self.room_name}"
         self.user = self.scope["user"]
         #self.user = await self.get_or_create_user("정세현", "default_user@example.com")
-        
         # if not self.user.is_authenticated:
         #     logger.warning("로그인 페이지로 이동")
         #     await self.close()
         #     return
+        
+        # 사용자가 인증되지 않은 경우 기본 사용자 정보 생성
+        if self.scope["user"].is_anonymous:
+            self.user = await self.get_or_create_user("default_user", "default_user@example.com")
+        else:
+            self.user = self.scope["user"]
         
         try:
             tryUser = await database_sync_to_async(self.get_user_by_number)(self.user.student_number)
@@ -44,8 +49,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
 
-        #ChatRoom 확인 및 생성
-        chatRoom = await self.get_or_create_chat_room(self.room_id)
+        #ChatRoom 확인 및 생성 -> 아마 안해도 됨 이미 있음
+        chatRoom = await sync_to_async(lambda: ChatRoom.objects.get())(name=self.room_name)
+        
         #사용자 방 권한 확인
         tryUser_join_room = await sync_to_async(lambda: tryUser.join_room)()
         checkUser_join_room = await sync_to_async(lambda: self.user.join_room)()
@@ -96,8 +102,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 
         # await self.send(text_data=json.dumps({'messages': decrypted_messages}))
     
-    def get_user_by_number(self, number):
-        return CustomUser.objects.filter(student_number=number).first()
+    # def get_user_by_number(self, number):
+    #     return CustomUser.objects.filter(student_number=number).first()
     
     async def disconnect(self, close_code):
         # Leave room group
@@ -192,16 +198,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return messages
         except ObjectDoesNotExist:
             return []
-    
-    @sync_to_async
-    def get_or_create_chat_room(self, room_id):
-        try:
-            return ChatRoom.objects.get(id=room_id)
-        except ObjectDoesNotExist:
-            return ChatRoom.objects.create(id=room_id, name=f"room_{room_id}")
-        
+
+            
     @sync_to_async
     def get_or_create_user(self, username, email):
         user, created = CustomUser.objects.get_or_create(username=username, defaults={'email': email})
         user.student_number = "60202247"
         return user
+
+    def get_user_by_number(self, student_number):
+        try:
+            return CustomUser.objects.get(student_number=student_number)
+        except CustomUser.DoesNotExist:
+            return None

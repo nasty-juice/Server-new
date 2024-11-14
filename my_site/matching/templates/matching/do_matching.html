@@ -14,7 +14,7 @@
         const student_number = "{{ user.student_number }}";//ex : 6021XXXX
         const userName = "{{user.username}}"; //ex : yoon
         const decodedUserName = decodeURIComponent(userName);
-        
+        let requestMatchName = "";
         const chatSocket = new WebSocket(
             'ws://'
             + window.location.host
@@ -46,13 +46,15 @@
             console.log(data);
             if(data.status == 'matched'){
                 document.getElementById("match-buttons").style.display = "block";
+                requestMatchName = data.request_name;
             }
             if(data.status == 'new_group'){
                 chatSocket.send(JSON.stringify({
                     'action': 'match_group',
                     'student_number': student_number,
-                    'location' : data.message,
+                    'location' : user_location, 
                     'user_name' : userName,
+                    'group_name' : data.message, //새로운 그룹 이름
                 }));
             }
             if(data.status == 'confirmed'){
@@ -66,6 +68,7 @@
                 'student_number': student_number,
                 'location' : user_location,
                 'user_name' : userName,
+                'request_name' : requestMatchName,
             }));
         };
 
@@ -75,6 +78,7 @@
                 'student_number': student_number,
                 'location' : user_location,
                 'user_name' : userName,
+                'request_name' : requestMatchName,
             }));
         };
     </script>

@@ -1,8 +1,10 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
+import uuid
 from .models import MatchingQueue, MatchRequest
 from django.http import JsonResponse
 from my_app.models import CustomUser
+from chat.models import ChatRoom
 from asgiref.sync import sync_to_async, async_to_sync
 
 NEED_USERNUM = 1
@@ -36,18 +38,23 @@ class StartMatching(AsyncWebsocketConsumer):
         
         #매칭 수락 거절 받기
         if action == 'accept_match':
-            await self.accept_match(userNumber, location)
+            request_name = text_data_json['request_name']
+            await self.accept_match(userNumber, request_name)
             return
         elif action == 'reject_match':
             await self.reject_match(userNumber, location)
             return
         elif action == 'match_group':
-            await self.channel_new_group(location)
+            #이미 매칭이 된 상태임
+            group_name = text_data_json['group_name']
+            await self.channel_new_group(group_name)
             targetQueue = await self.get_or_create_queue(location)
+            print(f"그룹 생성: {group_name}")
+            print(f"대기열: {targetQueue.name}")
             #매칭 예정 사용자들
             users_to_match = await sync_to_async(lambda: list(targetQueue.users.all()[:NEED_USERNUM]))()
+            print(f"매칭 예정 사용자: {users_to_match}")
             await self.confirm_match(users_to_match, location, targetQueue)
-            self.send(text_data=json.dumps({'status': 'matched'}))
             return
         
         #유저 학번으로 찾기
@@ -86,26 +93,24 @@ class StartMatching(AsyncWebsocketConsumer):
         queue_instance.save()
     
     #기존 그룹 삭제 후 새로운 그룹 형성
-    @sync_to_async
-    def channel_new_group(self, new_group_name):
-        self.channel_layer.group_discard(
+    async def channel_new_group(self, new_group_name):
+        await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
         self.room_group_name = new_group_name
-        
-        self.channel_layer.group_add(
-            new_group_name,
+        await self.channel_layer.group_add(
+            self.room_group_name,
             self.channel_name
         )
     
     async def create_new_group(self):
         #그룹 전체에 메시지를 전송
-        new_group_name = f"matching_{self.location}_{self.user.student_number}"
+        new_group_name = f"matching_{self.location}_{self.user.id}"
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "match_request",
+                "type": "send_to_group",
                 "message": new_group_name,
                 "status": "new_group",
             }
@@ -114,36 +119,43 @@ class StartMatching(AsyncWebsocketConsumer):
     #confirm_match
     async def confirm_match(self, users, location, targetQueue):
         confirm_match = await sync_to_async(MatchRequest.objects.create)(location_name=location)
-        confirm_match.name = f"{location}_{confirm_match.id}"
-        await sync_to_async(confirm_match.save)()
+        confirm_match.name = f"{location}_{uuid.uuid4()}"
         
-        await sync_to_async(confirm_match.confirm_users.set)(users)
+        await sync_to_async(confirm_match.confirm_users.clear)()
         await sync_to_async(confirm_match.save)()
         
         # targetQueue에서 사용자 제거
         await sync_to_async(targetQueue.users.remove)(*users)
+        await sync_to_async(targetQueue.save)()
         
+        print(f"매칭 요청: {confirm_match.name}")
         #그룹에 매칭 여부 전송
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                "type": "match_request",
+                "type": "send_to_group",
                 "message": "매칭을 수락하시겠습니까?",
                 "status": "matched",
-                "match_request_id": confirm_match.id
+                "request_name" : confirm_match.name
             }
         )
-    
-    async def match_request(self, event):
+        
+    async def send_to_group(self, event):
         message = event['message']
         status = event['status']
+
         print(f"메시지: {message}")
         
         try:
-            await self.send(text_data=json.dumps({
+            response = {
                 "message" : message,
                 "status": status, 
-            }))
+            }
+            #'request_name'이 존재하면 정보를 받아오기
+            if 'request_name' in event:
+                response["request_name"] = event['request_name']
+            
+            await self.send(text_data=json.dumps(response))
         except Exception as e:
             print(f"메시지 전송 실패: {e}")
     
@@ -179,55 +191,68 @@ class StartMatching(AsyncWebsocketConsumer):
         queue_instance.save()
     
     #사용자가 매칭 수락
-    async def accept_match(self, student_number, location):
+    async def accept_match(self, student_number, request_name):
         user = await self.get_user_by_number(student_number)
-        match_request = await self.get_match_request(location)
-        print(await sync_to_async(match_request.confirm_users.count)())#1
+        match_request = await self.get_match_request(request_name)
+        user_exist = await sync_to_async(lambda: match_request.confirm_users.filter(id=user.id).exists())()
         
-        await sync_to_async(match_request.confirm_users.add)(user)
+        if not user_exist:
+            await sync_to_async(match_request.confirm_users.add)(user)
+            await sync_to_async(match_request.save)()
+        else:
+            print("이미 수락했습니다.") 
+            return
         
         confirm_user_count = await sync_to_async(match_request.confirm_users.count)()
-        print(confirm_user_count)#1
-        
         if confirm_user_count == NEED_USERNUM:
+            all_users = await sync_to_async(lambda: list(match_request.confirm_users.all()))()
+            chat_room_name = f"{match_request.location_name}_{uuid.uuid4()}"
+            chat_room = await sync_to_async(lambda: ChatRoom.objects.create(name=chat_room_name))()
+            # ChatRoom에 모든 사용자 추가
+            #await self.add_users_to_chat_room(chat_room, all_users)
+            
+            # 모든 사용자의 join_room 필드를 업데이트
+            await self.update_users_join_room(all_users, chat_room)
             await self.channel_layer.group_send(
-                f"matching_{match_request.id}",
+                self.room_group_name,
                 {
-                    "type": "match_confirmed",
+                    "type": "send_to_group",
                     "message": "모든 사용자가 매칭을 수락했습니다.",
                     "status": "confirmed"
                 }
             )
             
-    async def match_confirmed(self, event):
-        print("여기 진행됨1")
-        message = event["message"]
-        status = event["status"]
-
-        await self.send(text_data=json.dumps({
-            "message": message,
-            "status": status
-        }))
-
-    #사용자가 매칭 거절
-    async def reject_match(self, student_number, location):
-        user = await self.get_user_by_number(student_number)
-        match_request = await self.get_match_request(location)
-        await sync_to_async(match_request.confirm_users.remove)(user)
-        
-        await self.channel_layer.group_send(
-            f"matching_{match_request.id}",
-            {
-                "type": "match_rejected",
-                "message": f"{user.username}님이 매칭을 거절했습니다.",
-                "status": "rejected"
-            }
-        )
+            await sync_to_async(match_request.delete)()
     
     @sync_to_async
-    def get_match_request(self, location):
+    def update_users_join_room(self, users, chat_room):
+        for user in users:
+            user.join_room = chat_room
+            user.save()
+    
+    @sync_to_async
+    def add_users_to_chat_room(self, chat_room, users):
+        chat_room.users.add(*users)
+        chat_room.save()
+    #사용자가 매칭 거절
+    # async def reject_match(self, student_number, location):
+    #     user = await self.get_user_by_number(student_number)
+    #     match_request = await self.get_match_request(location)
+    #     await sync_to_async(match_request.confirm_users.remove)(user)
+        
+    #     await self.channel_layer.group_send(
+    #         f"matching_{match_request.id}",
+    #         {
+    #             "type": "match_rejected",
+    #             "message": f"{user.username}님이 매칭을 거절했습니다.",
+    #             "status": "rejected"
+    #         }
+    #     )
+    
+    @sync_to_async
+    def get_match_request(self, request_name):
         try:
-            return MatchRequest.objects.filter(location_name=location).first()
+            return MatchRequest.objects.filter(name=request_name).first()
         except MatchRequest.DoesNotExist:
             return None
     
