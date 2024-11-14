@@ -13,7 +13,6 @@
         const user_location = "{{ location }}"; //ex : 학관
         const student_number = "{{ user.student_number }}";//ex : 6021XXXX
         const userName = "{{user.username}}"; //ex : yoon
-        const action = "{{ action }}"; // 행동 값
         const decodedUserName = decodeURIComponent(userName);
         
         const chatSocket = new WebSocket(
@@ -29,7 +28,7 @@
                 'location' : user_location,
                 'student_number' : student_number,
                 'user_name' : userName,
-                'action' : action,
+                'action' : 'open',
             }));
             console.log('Connection opened');
         };
@@ -48,12 +47,25 @@
             if(data.status == 'matched'){
                 document.getElementById("match-buttons").style.display = "block";
             }
+            if(data.status == 'new_group'){
+                chatSocket.send(JSON.stringify({
+                    'action': 'match_group',
+                    'student_number': student_number,
+                    'location' : data.message,
+                    'user_name' : userName,
+                }));
+            }
+            if(data.status == 'confirmed'){
+                //화면 이동
+            }
         };
 
         document.getElementById("accept-button").onclick = function() {
             chatSocket.send(JSON.stringify({
                 'action': 'accept_match',
                 'student_number': student_number,
+                'location' : user_location,
+                'user_name' : userName,
             }));
         };
 
@@ -61,6 +73,8 @@
             chatSocket.send(JSON.stringify({
                 'action': 'reject_match',
                 'student_number': student_number,
+                'location' : user_location,
+                'user_name' : userName,
             }));
         };
     </script>

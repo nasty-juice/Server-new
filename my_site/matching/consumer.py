@@ -11,9 +11,15 @@ class StartMatching(AsyncWebsocketConsumer):
     async def connect(self):
         self.location = self.scope["url_route"]["kwargs"]["location"]
         self.user = self.scope["user"]
+        self.room_group_name = f"matching_{self.location}"
+        
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
         
         await self.accept()
-
+    
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
@@ -35,14 +41,20 @@ class StartMatching(AsyncWebsocketConsumer):
         elif action == 'reject_match':
             await self.reject_match(userNumber, location)
             return
+        elif action == 'match_group':
+            await self.channel_new_group(location)
+            targetQueue = await self.get_or_create_queue(location)
+            #매칭 예정 사용자들
+            users_to_match = await sync_to_async(lambda: list(targetQueue.users.all()[:NEED_USERNUM]))()
+            await self.confirm_match(users_to_match, location, targetQueue)
+            self.send(text_data=json.dumps({'status': 'matched'}))
+            return
         
         #유저 학번으로 찾기
         user = await self.get_user_by_number(userNumber)
-        
-        #장소 데이터 불러오기
+        #장소 데이터 불러오기 //학관, 명진당
         targetQueue = await self.get_or_create_queue(location)
-        
-        print(user.username + " " + targetQueue.name)
+        print(user.username + " : " + targetQueue.name)
         
         #큐에 존재하는지 확인, 사용자 추가
         already_in_queue = await self.check_user_in_queue(user,targetQueue)
@@ -63,25 +75,47 @@ class StartMatching(AsyncWebsocketConsumer):
         #매칭 로직 
         if canMatch:
             if queue_size >= NEED_USERNUM:
-                users_to_match = await sync_to_async(lambda: list(targetQueue.users.all()[:NEED_USERNUM]))()
-                await self.confirm_match(users_to_match, location, targetQueue)
-                self.send(text_data=json.dumps({'status': 'matched'}))
+                #새로운 채널스 그룹 만들기
+                await self.create_new_group()
             else:
                 await self.send(text_data=json.dumps({'status': 'waiting'}))
     
     @sync_to_async
     def remove_users_from_queue(self, queue_instance, users):
         queue_instance.users.remove(*users)
-        
-    async def confirm_match(self, users, location, targetQueue):
-        confirm_match = await sync_to_async(MatchRequest.objects.create)(location_name=location)
-        self.room_group_name = f"matching_{confirm_match.id}"
-
-        #그룹으로 새롭게 묶음
-        await self.channel_layer.group_add(
+        queue_instance.save()
+    
+    #기존 그룹 삭제 후 새로운 그룹 형성
+    @sync_to_async
+    def channel_new_group(self, new_group_name):
+        self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
+        self.room_group_name = new_group_name
+        
+        self.channel_layer.group_add(
+            new_group_name,
+            self.channel_name
+        )
+    
+    async def create_new_group(self):
+        #그룹 전체에 메시지를 전송
+        new_group_name = f"matching_{self.location}_{self.user.student_number}"
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "match_request",
+                "message": new_group_name,
+                "status": "new_group",
+            }
+        )
+    
+    #confirm_match
+    async def confirm_match(self, users, location, targetQueue):
+        confirm_match = await sync_to_async(MatchRequest.objects.create)(location_name=location)
+        confirm_match.name = f"{location}_{confirm_match.id}"
+        await sync_to_async(confirm_match.save)()
         
         await sync_to_async(confirm_match.confirm_users.set)(users)
         await sync_to_async(confirm_match.save)()
@@ -89,19 +123,9 @@ class StartMatching(AsyncWebsocketConsumer):
         # targetQueue에서 사용자 제거
         await sync_to_async(targetQueue.users.remove)(*users)
         
-        # 그룹에 사용자 추가
-        group_name = f"matching_{confirm_match.id}"
-        
-        #사용자들 그룹으로 묶기
-        for user in users:
-            await self.channel_layer.group_add(
-                group_name,
-                self.channel_name
-            )
-        
         #그룹에 매칭 여부 전송
         await self.channel_layer.group_send(
-            group_name,
+            self.room_group_name,
             {
                 "type": "match_request",
                 "message": "매칭을 수락하시겠습니까?",
@@ -158,12 +182,14 @@ class StartMatching(AsyncWebsocketConsumer):
     async def accept_match(self, student_number, location):
         user = await self.get_user_by_number(student_number)
         match_request = await self.get_match_request(location)
+        print(await sync_to_async(match_request.confirm_users.count)())#1
+        
         await sync_to_async(match_request.confirm_users.add)(user)
         
         confirm_user_count = await sync_to_async(match_request.confirm_users.count)()
-        total_user_count = await sync_to_async(match_request.users.count)()
+        print(confirm_user_count)#1
         
-        if confirm_user_count == total_user_count:
+        if confirm_user_count == NEED_USERNUM:
             await self.channel_layer.group_send(
                 f"matching_{match_request.id}",
                 {
@@ -172,6 +198,16 @@ class StartMatching(AsyncWebsocketConsumer):
                     "status": "confirmed"
                 }
             )
+            
+    async def match_confirmed(self, event):
+        print("여기 진행됨1")
+        message = event["message"]
+        status = event["status"]
+
+        await self.send(text_data=json.dumps({
+            "message": message,
+            "status": status
+        }))
 
     #사용자가 매칭 거절
     async def reject_match(self, student_number, location):
@@ -187,3 +223,13 @@ class StartMatching(AsyncWebsocketConsumer):
                 "status": "rejected"
             }
         )
+    
+    @sync_to_async
+    def get_match_request(self, location):
+        try:
+            return MatchRequest.objects.filter(location_name=location).first()
+        except MatchRequest.DoesNotExist:
+            return None
+    
+    
+        

@@ -14,6 +14,7 @@ class MatchingQueue(models.Model):
 
 #매칭 임시 그룹 - 수락 누르면 대화방 권한 주는걸로
 class MatchRequest(models.Model):
+    name = models.CharField(max_length=100, unique=True, default='match_request')
     location_name = models.CharField(max_length=100)
     confirm_users = models.ManyToManyField(CustomUser, related_name='confirm_group',blank=True)
     

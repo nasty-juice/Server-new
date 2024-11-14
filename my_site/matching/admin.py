@@ -17,7 +17,7 @@ class MatchingQueueAdmin(admin.ModelAdmin):
 
 @admin.register(MatchRequest)
 class MatchRequestAdmin(admin.ModelAdmin):
-    list_display = ('location_name', 'created_at')
+    list_display = ('name', 'created_at')
     search_fields = ('location_name',)
     filter_horizontal = ('confirm_users',)
     

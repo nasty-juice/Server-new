@@ -16,12 +16,11 @@ import os
 NGROK_ADDRESS = "d9c7-125-191-254-69.ngrok-free.app"
 NGROK_URL = "https://" + NGROK_ADDRESS
 
-BACKEND_ADDRESS = "127.0.0.1"
-FRONTEND_ADDRESS = "192.168.35.183"
+BACKEND_ADDRESS = "192.168.0.3"
+FRONTEND_ADDRESS = "192.168.0.26"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,7 +43,7 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app']
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app', '*', '127.0.0.1']
 
 
 # Application definition

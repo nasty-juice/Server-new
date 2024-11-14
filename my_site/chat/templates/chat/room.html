@@ -11,8 +11,9 @@
     {% comment %} GET: 이름, 학번, 메시지, 시간 {% endcomment %}
     <script>
         const roomName = "{{ room_id }}";
-        const userId = "{{ user.id }}";//ex : 21
+        const userNum = "{{ user.student_number }}";//ex : 6021XXXX
         const userName = "{{user.username}}"; //ex : yoon
+        const backendIp = "192.168.0.17:8000";
         const chatSocket = new WebSocket(
             'ws://'
             + window.location.host
@@ -25,11 +26,13 @@
             const data = JSON.parse(e.data);
             if(Array.isArray(data.messages)){
                 data.messages.forEach(msg => {
-                    document.querySelector('#chat-log').value += (msg.user_name + ':' + msg.message + '\n');
+                    const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                    document.querySelector('#chat-log').value += (msg.user_name + ':' + msg.message + ' - ' + timestamp + '\n');
                 })
             }
             else{
-                document.querySelector('#chat-log').value += (data.user_name + ':' + data.message + '\n');
+                const timestamp = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                document.querySelector('#chat-log').value += (data.user_name + ':' + data.message + ' - ' + timestamp + '\n');
             }
         };
 
@@ -57,8 +60,8 @@
 
             chatSocket.send(JSON.stringify({
                 'message': message,
-                'user_id' : userId,
                 'user_name' : userName,
+                'user_num' : userNum,
             }));
             messageInputDom.value = '';
         };
