@@ -33,6 +33,7 @@ class UserDetailView(DetailView):
 
 # STUDENT CARD IMAGE VIEW
 @login_required
+@user_passes_test(lambda u: u.is_superuser)
 def private_media_view(request, file_path):
     print(file_path)
     file_path = os.path.join(settings.BASE_DIR, 'private_media', file_path)

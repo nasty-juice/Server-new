@@ -15,7 +15,6 @@ class CustomUser(AbstractUser):
     last_name = None
     
     username = models.CharField(max_length=20, unique=False, blank=False, null=False)
-    
     email = models.EmailField(unique=True, blank=False, null=False)
     
     # Add additional fields here if needed
@@ -28,6 +27,7 @@ class CustomUser(AbstractUser):
     student_card_data = models.JSONField(blank=True, null=True, default=dict)
 
     department = models.CharField(max_length=50, blank=True, null=False)
+    enrolled_student = models.BooleanField(default=False)
     
     is_waiting = models.BooleanField(default=False)
     is_valid_student = models.BooleanField(default=False)

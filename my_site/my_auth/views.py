@@ -60,6 +60,7 @@ class UserPasswordChangeView(APIView):
         return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
 # 내 정보 가져오기
+@method_decorator(csrf_exempt, name='dispatch')
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]      # 로그인한 사용자만 접근 가능
     
@@ -76,7 +77,7 @@ class UserDetailView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 # 로그인
-# @method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomLoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
