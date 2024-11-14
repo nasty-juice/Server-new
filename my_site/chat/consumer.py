@@ -30,6 +30,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
         self.user = self.scope["user"]
+        
         #self.user = await self.get_or_create_user("정세현", "default_user@example.com")
         # if not self.user.is_authenticated:
         #     logger.warning("로그인 페이지로 이동")
