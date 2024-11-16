@@ -13,14 +13,14 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_ADDRESS = "d9c7-125-191-254-69.ngrok-free.app"
-NGROK_URL = "https://" + NGROK_ADDRESS
+NGROK_URL = "https://0048-202-30-111-171.ngrok-free.app"
 
-BACKEND_ADDRESS = "192.168.0.3"
-FRONTEND_ADDRESS = "192.168.0.26"
+BACKEND_ADDRESS = "127.0.0.1"
+FRONTEND_ADDRESS = "192.168.0.37"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +43,7 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app', '*', '127.0.0.1']
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app']
 
 
 # Application definition
@@ -67,7 +67,7 @@ INSTALLED_APPS = [
 
     # Django REST framework 및 관련 인증 앱
     'rest_framework',
-    #'rest_framework.authtoken',
+    'rest_framework.authtoken',
     
     # django-allauth와 관련 앱
     'django.contrib.sites',
@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'my_auth.apps.MyAuthConfig',
     'chat',
     'matching',
+    'taxi_matching.apps.TaxiMatchingConfig',
 ]
 
 MIDDLEWARE = [
@@ -214,6 +215,9 @@ ACCOUNT_FORMS = {
     'signup': 'my_auth.forms.CustomSignupForm',
 }
 
+
+
+
 # CORS 설정
 CORS_ALLOW_ALL_ORIGINS = True
 # CORS_ALLOW_CREDENTIALS = True
@@ -222,6 +226,14 @@ CORS_ALLOWED_ORIGINS = [
     BACKEND_URL,
     NGROK_URL,
 ]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'origin',
+]
+
 
 # CSRF 설정
 CSRF_TRUSTED_ORIGINS = [
@@ -230,15 +242,20 @@ CSRF_TRUSTED_ORIGINS = [
     NGROK_URL,
 ]
 
+
 # REST framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        #'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+
+
+
 
 #채널 레이어
 # Daphne
