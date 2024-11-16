@@ -19,5 +19,3 @@ class MatchRequest(models.Model):
     confirm_users = models.ManyToManyField(CustomUser, related_name='confirm_group',blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
-    
-#완성된 4명에 대한 로직도 구현해야함
