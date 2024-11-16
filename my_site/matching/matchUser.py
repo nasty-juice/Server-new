@@ -2,22 +2,24 @@ from django.http import HttpResponseRedirect
 from chat.models import ChatRoom
 from .models import MatchingQueue
 
-room_num = 1
-def matchUser(users):
-    global room_num
-    chat_room = ChatRoom.objects.create(name=room_num)
+def matchUser(users, location):
+    chat_room = ChatRoom.objects.create()
+    chat_room.name = f"{location}{chat_room.id}"
+    chat_room.save()
     
-    for user in users:
-        user.join_room = room_num
-        cancelMatch(user)
-        user.save()
+    try:
+        for user in users:
+            user.join_room = chat_room
+            cancelMatch(user)
+            user.save()
+    except Exception as e:
+        chat_room.delete()
+        raise e
     
-    room_num+=1
-    redirect_url = f'/chat/roomNum/{chat_room.name}/'
+    redirect_url = f'/chat/roomNum/{chat_room.id}/'
     
     return HttpResponseRedirect(redirect_url)
     
-
 def cancelMatch(user):
     for match in MatchingQueue.objects.all():
         if match.users.filter(id=user.id).exists():

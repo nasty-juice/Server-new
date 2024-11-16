@@ -1,10 +1,9 @@
 from django.urls import path, include
-from .views import start_matching, start_matching_page, cancel_matching,group_page,quit_group
+from .views import start_matching_page, cancel_matching, do_matching
 
 urlpatterns = [
     path('',start_matching_page,name='start_matching_page'),
-    path('matching/', start_matching, name='start_matching'),
     path('cancel_matching',cancel_matching, name='cancel_matching'),
     path('group/<int:group_id>/', include('chat.urls'), name='group_page'),
-    path('quit_group/<int:group_id>',quit_group, name="quit_group"),
+    path('matching/<str:location>',do_matching, name = 'do_matching'),
 ]

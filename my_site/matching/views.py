@@ -1,13 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import MatchingQueue, UserGroup
-from my_app.models import CustomUser
-from .user_queue import userQueue
+from .models import MatchingQueue, MatchRequest
 from django.contrib.auth.decorators import login_required
 import logging
 from .matchUser import matchUser, cancelMatch
 logger = logging.getLogger(__name__)
 
+def start_matching_page(request):
+    return render(request, 'matching/start_matching.html')
+
+def do_matching(request, location):
+    return render(request, 'matching/do_matching.html',{'location':location})
+
+#매칭 뷰
 def start_matching(request):
     if request.method == 'POST':
         #현재 로그인된 사용자
@@ -15,7 +20,6 @@ def start_matching(request):
         #장소 데이터
         location = request.POST.get('location')
         targetQueue = MatchingQueue.objects.filter(name=location)
-        
         #큐 종류 있는지 확인
         if targetQueue.exists():
             queue_instance = targetQueue.first()
@@ -38,12 +42,9 @@ def start_matching(request):
         need_userNum = 1
         if queue_size >= need_userNum:
             users_to_match = queue_instance.users.all()[:need_userNum]
-            return matchUser(users_to_match)
+            return matchUser(users_to_match,location)
         else:
             return JsonResponse({'status': 'waiting'})
-
-def start_matching_page(request):
-    return render(request, 'matching/start_matching.html')
 
 
 def cancel_matching(request):
@@ -53,37 +54,3 @@ def cancel_matching(request):
         cancelMatch(user)
     
     return JsonResponse({'status': 'none'})
-
-def group_page(request, group_id):
-    group = UserGroup.objects.get(id=group_id)
-    if request.user in group.users.all():
-        return render(request, 'matching/group_page.html',{'group': group})
-    else :
-        return redirect('some_error_page')
-    
-def quit_group(request, group_id):
-    group = get_object_or_404(UserGroup, id=group_id)
-    user = request.user
-    
-    userExist = group.users.filter(id=user.id).exists()
-    if userExist:
-        group.users.remove(userExist)
-        
-        # 그룹에 유저가 없으면 그룹을 삭제
-        if group.users.count() == 0:
-            group.delete()
-            
-    return redirect('start_matching_page')
-
-
-# if queue_size >= 1:
-#             users_to_match = queue_instance.users.all()[:2]
-#             group = UserGroup.objects.create()
-#             logger.debug(users_to_match)
-#             for user in users_to_match:
-#                 group.users.add(user)
-#                 queue_instance.users.remove(user) #큐에서 제거 
-
-#             group.save()
-            
-#             return redirect('group_page',group_id=group.id)
