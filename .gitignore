@@ -9,3 +9,5 @@ private_media/
 
 # Ignore the database
 db.sqlite3
+
+*.pyc
