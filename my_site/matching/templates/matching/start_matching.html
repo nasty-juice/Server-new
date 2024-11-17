@@ -5,13 +5,13 @@
 </head>
 <body>
     <h1>매칭 서비스</h1>
-    <form action="{% url 'do_matching' '학관'%}" method="POST">
+    <form action="{% url 'do_matching' 'student_center'%}" method="POST">
         {% csrf_token %}
         <input type="hidden" name="location", value="학관">
         <input type="hidden" name="action", value="학관">
         <button type="submit">학관 매칭 시작</button>
     </form>
-    <form action="{% url 'do_matching' '명진당'%}" method="POST">
+    <form action="{% url 'do_matching' 'myeongjin'%}" method="POST">
         {% csrf_token %}
         <input type="hidden" name="location", value="명진당">
         <input type="hidden" name="location", value="학관">
