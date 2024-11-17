@@ -10,26 +10,18 @@
         <button id="reject-button">매칭 거절</button>
     </div>
     <script>
-        const user_location = "{{ location }}"; //ex : 학관
+        const user_location = "{{ location }}"; //ex : student_center 
         const student_number = "{{ user.student_number }}";//ex : 6021XXXX
         const userName = "{{user.username}}"; //ex : yoon
-        const decodedUserName = decodeURIComponent(userName);
-        let requestMatchName = "";
         const chatSocket = new WebSocket(
             'ws://'
             + window.location.host
             + '/ws/matching/'
-            + decodedUserName
+            + user_location
             + '/'
         );
         
         chatSocket.onopen = function(e) {
-            chatSocket.send(JSON.stringify({
-                'location' : user_location,
-                'student_number' : student_number,
-                'user_name' : userName,
-                'action' : 'open',
-            }));
             console.log('Connection opened');
         };
         
@@ -46,39 +38,27 @@
             console.log(data);
             if(data.status == 'matched'){
                 document.getElementById("match-buttons").style.display = "block";
-                requestMatchName = data.request_name;
             }
             if(data.status == 'new_group'){
                 chatSocket.send(JSON.stringify({
                     'action': 'match_group',
-                    'student_number': student_number,
-                    'location' : user_location, 
-                    'user_name' : userName,
-                    'group_name' : data.message, //새로운 그룹 이름
+                    'new_group_name':data.message
                 }));
             }
             if(data.status == 'confirmed'){
-                //화면 이동
+                //대화방 화면으로 이동
             }
         };
 
         document.getElementById("accept-button").onclick = function() {
             chatSocket.send(JSON.stringify({
                 'action': 'accept_match',
-                'student_number': student_number,
-                'location' : user_location,
-                'user_name' : userName,
-                'request_name' : requestMatchName,
             }));
         };
 
         document.getElementById("reject-button").onclick = function() {
             chatSocket.send(JSON.stringify({
                 'action': 'reject_match',
-                'student_number': student_number,
-                'location' : user_location,
-                'user_name' : userName,
-                'request_name' : requestMatchName,
             }));
         };
     </script>
