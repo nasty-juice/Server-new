@@ -10,4 +10,11 @@ private_media/
 # Ignore the database
 db.sqlite3
 
+**/__pycache__/
 *.pyc
+
+# Ignore all files in the migrations folder
+**/migrations/*
+
+# But keep the __init__.py file (to ensure the folder is included in the repository)
+!**/migrations/__init__.py
