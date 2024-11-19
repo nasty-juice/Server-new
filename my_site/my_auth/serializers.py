@@ -33,7 +33,7 @@ class CustomSignupSerializer(serializers.ModelSerializer):
                     new_filename = f"{user.student_number}_student_card.jpg"
                     user.student_card_image.save(new_filename, student_card_image)
                     
-                #     # OCR 처리
+                ## OCR 처리
                     clean_dict = perform_ocr(student_card_image)
                     print("clean dict: ", clean_dict)
 

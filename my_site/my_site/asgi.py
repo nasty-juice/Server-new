@@ -4,6 +4,7 @@ from channels.auth import AuthMiddlewareStack
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
+from .middleware import TokenAuthMiddleware
 
 from matching.consumer import StartMatching
 from chat.consumer import ChatConsumer
@@ -21,7 +22,7 @@ application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
         "websocket": AllowedHostsOriginValidator(
-            AuthMiddlewareStack(
+            TokenAuthMiddleware(
                 URLRouter(
                     websocket_urlpatterns,
                 )
