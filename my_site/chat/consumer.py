@@ -9,12 +9,10 @@ from cryptography.fernet import Fernet
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import ChatMessage, ChatRoom
-from my_app.models import CustomUser
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
 from dotenv import load_dotenv
 from my_site.settings import BASE_DIR
-from datetime import datetime
 # .env 파일을 로드
 load_dotenv()
 
@@ -30,23 +28,24 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
         self.user = self.scope["user"]
-        print(self.room_group_name)
+        print(f'room_name : {self.room_name}')
+        print(f'user : {self.user}')
         
         # 사용자가 인증되지 않은 경우 기본 사용자 정보 생성
-        if self.scope["user"].is_anonymous:
-            self.user = await self.get_or_create_user("default_user", "default_user@example.com")
-        else:
-            self.user = self.scope["user"]
+        # if self.scope["user"].is_anonymous:
+        #     self.user = await self.get_or_create_user("default_user", "default_user@example.com")
+        # else:
+        #     self.user = self.scope["user"]
 
         #ChatRoom 확인
         chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
-        #사용자 방 확인
-        join_room = await sync_to_async(lambda: self.user.join_room)()
+        # #사용자 방 확인
+        user_join_room = await sync_to_async(lambda: self.user.join_room)()
         
-        if join_room is None or join_room != chatRoom:
-                logger.warning("방 권한이 없습니다.")
-                await self.close()
-                return
+        if user_join_room is None or user_join_room != chatRoom:
+            logger.warning("방 권한이 없습니다.")
+            await self.close()
+            return
         
         #Join room group
         await self.channel_layer.group_add(
@@ -168,12 +167,5 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return messages
         except ObjectDoesNotExist:
             return []
-
-            
-    @sync_to_async
-    def get_or_create_user(self, username, email):
-        user, created = CustomUser.objects.get_or_create(username=username, defaults={'email': email})
-        user.student_number = "60202247"
-        return user
 
     
