@@ -18,7 +18,7 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True, blank=False, null=False)
     
     # Add additional fields here if needed
-    student_number = models.PositiveIntegerField(max_length=8, unique=True, blank=False, null=False)
+    student_number = models.PositiveIntegerField(unique=True, blank=False, null=False)
     
     email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
@@ -37,6 +37,8 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
     
     join_room = models.ForeignKey(ChatRoom, related_name='users', on_delete=models.SET_NULL, blank=True, null=True)
+    
+    temperature = models.DecimalField(max_digits=3, decimal_places=1, default=36.5)
     
     def save(self, *args, **kwargs):
         if self.student_card_image:
