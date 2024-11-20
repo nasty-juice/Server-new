@@ -5,13 +5,20 @@ class MatchingMixin:
         queues = MatchingQueue.objects.all()
         response_data = []
         
-        for queue in queues:
-            current_user_count = queue.users.count()
+        if queues.count() == 0:
             response_data.append({
-                "name": queue.name,
-                "current_user_count": current_user_count,
-
+                "name": "No queue",
+                "current_user_count": 0,
             })
+            return response_data
+        else:
+            for queue in queues:
+                current_user_count = queue.users.count()
+                response_data.append({
+                    "name": queue.name,
+                    "current_user_count": current_user_count,
+
+                })
 
         return response_data
     
@@ -24,3 +31,4 @@ class MatchingMixin:
         response_data = [item for item in data if item['name'] in ['station_to_mju', 'mju_to_station']]
 
         return response_data
+    
