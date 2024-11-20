@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from my_app.models import CustomUser
 from chat.models import ChatRoom
 from asgiref.sync import sync_to_async, async_to_sync
-from .utils import get_or_create_queue, check_user_in_queue, update_users_join_room, get_match_request
+from .utils import get_or_create_queue, check_user_in_queue, update_users_join_room, get_match_request, update_queue_size
 import asyncio
 NEED_USERNUM = 2
 
@@ -65,17 +65,21 @@ class StartMatching(AsyncWebsocketConsumer):
         if join_room is None:
             await sync_to_async(targetQueue.users.add)(self.user)
             await sync_to_async(targetQueue.save)()
+             
+            # 사용자가 큐에 추가되었을 때 update_queue_size 함수를 호출하여 큐의 크기를 업데이트
+            await update_queue_size(self.channel_layer, self.room_group_name, targetQueue)
         else:
             await self.send(text_data=json.dumps({'status': 'you already have room'}))
             return
 
         queue_size = await sync_to_async(lambda: targetQueue.users.count())()
+        
         #매칭 로직
         if queue_size >= NEED_USERNUM:
             #새로운 채널스 그룹 만들기
             await self.create_new_group()
         else:
-            await self.send(text_data=json.dumps({'status': 'waiting'}))
+            await self.send(text_data=json.dumps({'status': 'waiting',}))
     
     async def match_group(self, new_group_name):
         #이미 매칭이 된 상태임
@@ -221,5 +225,8 @@ class StartMatching(AsyncWebsocketConsumer):
         targetQueue = await (get_or_create_queue(self.location))
         await sync_to_async(targetQueue.users.remove)(self.user)
         await sync_to_async(targetQueue.save)()
+        
+        # 사용자가 큐에서 제거되었을 때 update_queue_size 함수를 호출하여 큐의 크기를 업데이트
+        await update_queue_size(self.channel_layer, self.room_group_name, targetQueue)
         
         await self.send(text_data=json.dumps({'status': 'cancel_matching'}))   
