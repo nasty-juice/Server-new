@@ -13,14 +13,13 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://0048-202-30-111-171.ngrok-free.app"
+NGROK_URL = "https://794e-117-17-163-65.ngrok-free.app"
 
-BACKEND_ADDRESS = "127.0.0.1"
+BACKEND_ADDRESS = "192.168.65.162"
 FRONTEND_ADDRESS = "192.168.0.37"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,7 +42,7 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app']
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -180,8 +179,8 @@ SITE_ID = 1  # 사용하는 사이트의 ID 설정
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # 이메일로 로그인하도록 설정
 LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정

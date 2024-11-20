@@ -9,6 +9,9 @@
         <button id="accept-button">매칭 수락</button>
         <button id="reject-button">매칭 거절</button>
     </div>
+    <div id="cancel-button">
+        <button id="cancel-button">매칭 취소</button>
+    </div>
     <script>
         const user_location = "{{ location }}"; //ex : student_center 
         const student_number = "{{ user.student_number }}";//ex : 6021XXXX
@@ -17,7 +20,7 @@
             'ws://'
             + window.location.host
             + '/ws/matching/'
-            + user_location
+            + user_location//ex : student_center
             + '/'
         );
         
@@ -38,6 +41,7 @@
             console.log(data);
             if(data.status == 'matched'){
                 document.getElementById("match-buttons").style.display = "block";
+                document.getElementById("cancel-button").style.display = "none";
             }
             if(data.status == 'new_group'){
                 chatSocket.send(JSON.stringify({
@@ -59,6 +63,12 @@
         document.getElementById("reject-button").onclick = function() {
             chatSocket.send(JSON.stringify({
                 'action': 'reject_match',
+            }));
+        };
+
+        document.getElementById("cancel-button").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'action': 'cancel_matching',
             }));
         };
     </script>
