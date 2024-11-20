@@ -1,9 +1,9 @@
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model #현재 프로젝트에서 사용중인 User 모델을 가져옴
 from rest_framework.authtoken.models import Token
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs #쿼리 문자열을 파싱하기 위한 함수
 
 User = get_user_model()
 

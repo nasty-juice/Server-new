@@ -14,6 +14,10 @@ class StartMatching(AsyncWebsocketConsumer):
     async def connect(self):
         self.location = self.scope["url_route"]["kwargs"]["location"]
         self.user = self.scope["user"]
+        if self.user.is_anonymous:
+            #
+            return
+        
         self.room_group_name = f"matching_{self.location}"
         self.userNumber = self.user.student_number
         
@@ -22,6 +26,7 @@ class StartMatching(AsyncWebsocketConsumer):
             self.channel_name
         )
         
+        #웹 소켓 연결 수락
         await self.accept()
         
         #웹 소켓 연결시 바로 실행
@@ -41,7 +46,6 @@ class StartMatching(AsyncWebsocketConsumer):
                 await self.reject_match()
                 return
             case 'match_group':
-                print(f"새 그룹 생성 요청: {self.user} - {text_data_json['new_group_name']}")
                 await self.match_group(text_data_json['new_group_name'])
                 return
             case 'cancel_matching':
@@ -82,10 +86,10 @@ class StartMatching(AsyncWebsocketConsumer):
         await self.channel_new_group(new_group_name)
         
         try:
-            print(f"임시 매칭 대기열 생성자: {self.user}")
             confirm_match = await sync_to_async(MatchRequest.objects.create)(name=self.new_group_name,location_name=self.location)
             await sync_to_async(confirm_match.confirm_users.clear)()
             await sync_to_async(confirm_match.save)()
+            print(f'{self.user}님의 매칭 요청: {self.new_group_name}')
             #강제로 시간 대기 -> 각 클라이언트가 새로운 그룹 연결이 성공적으로 이루어진 후 작동해야함
             await asyncio.sleep(0.1)
             await self.send_confirm_match()
@@ -167,27 +171,43 @@ class StartMatching(AsyncWebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+        print(f"{self.user} : 새로운 채널 입장 완료")
     
     #매칭 수락 여부 각 클라에 보내기
     async def send_confirm_match(self):        
         # targetQueue에서 사용자 제거
         targetQueue = await get_or_create_queue(self.location)
         users = await sync_to_async(lambda: list(targetQueue.users.all()[:NEED_USERNUM]))()
-    
+        
         await sync_to_async(targetQueue.users.remove)(*users)
         await sync_to_async(targetQueue.save)()
         
-        print(f"{self.user}님의 그룹 이름 : {self.new_group_name}")
+        #유저 데이터 묶어서 보내기
+        user_data = []
+        for user in users:
+            try:
+                user_info = {
+                    'user_number': user.student_number,
+                    'user_temperature': float(user.temperature),
+                }
+                user_data.append(user_info)
+            except Exception as e:
+                print(f"유저 데이터 처리 중 오류 발생: {e}")
+                continue
+        
+        print(f"매칭된 유저: {user_data}")
+        print(f"유저 데이터: {json.dumps(user_data)}")
+        
         #그룹에 매칭 여부 전송
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "send_to_group",
-                "message": "매칭을 수락하시겠습니까?",
-                "status": "matched",
+                "message": user_data,
+                "status": "matched",    
             }
         )
-    
+        
     async def create_new_group(self):
         #그룹 전체에 메시지를 전송
         self.new_group_name = f"matching_{self.location}_{uuid.uuid4()}"

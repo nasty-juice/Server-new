@@ -41,7 +41,10 @@
             console.log(data);
             if(data.status == 'matched'){
                 document.getElementById("match-buttons").style.display = "block";
-                document.getElementById("cancel-button").style.display = "none";
+                document.getElementById("cancel-button").style.display = "none";    
+                data.message.forEach(msg => {
+                    console.log(msg);
+                });    
             }
             if(data.status == 'new_group'){
                 chatSocket.send(JSON.stringify({

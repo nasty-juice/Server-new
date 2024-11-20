@@ -18,6 +18,7 @@ websocket_urlpatterns = [
     re_path(r"ws/chat/(?P<room_name>[\w\-]+)/$", ChatConsumer.as_asgi()),
 ]
 
+#배포할때
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
@@ -30,3 +31,17 @@ application = ProtocolTypeRouter(
         ),
     }
 )
+
+#로컬에서 혼자 작업할때
+# application = ProtocolTypeRouter(
+#     {
+#         "http": django_asgi_app,
+#         "websocket": AllowedHostsOriginValidator(
+#             AuthMiddlewareStack(
+#                 URLRouter(
+#                     websocket_urlpatterns,
+#                 )
+#             )
+#         ),
+#     }
+# )
