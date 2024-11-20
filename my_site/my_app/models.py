@@ -1,7 +1,8 @@
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
 from django.conf import settings
 from django.db import models
 from chat.models import ChatRoom
-from django.contrib.auth.models import AbstractUser
 import uuid
 import os
 from .storages import PrivateMediaStorage
@@ -18,7 +19,19 @@ class CustomUser(AbstractUser):
     email = models.EmailField(unique=True, blank=False, null=False)
     
     # Add additional fields here if needed
-    student_number = models.PositiveIntegerField(max_length=8, unique=True, blank=False, null=False)
+    student_number = models.CharField(
+        max_length=8,
+        unique=True,
+        blank=False,
+        null=False,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{8}$',
+                message='Student number must be 8 digits.',
+                code='invalid_student_number'
+            )
+        ]
+    )
     
     email_verified = models.BooleanField(default=False)
     email_verification_token = models.UUIDField(default=uuid.uuid4, unique=True)
