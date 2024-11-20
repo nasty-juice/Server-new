@@ -13,9 +13,9 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://794e-117-17-163-65.ngrok-free.app"
+NGROK_URL = "https://f9cc-125-191-254-69.ngrok-free.app"
 
-BACKEND_ADDRESS = "192.168.65.162"
+BACKEND_ADDRESS = "127.0.0.1"
 FRONTEND_ADDRESS = "192.168.0.37"
 
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"

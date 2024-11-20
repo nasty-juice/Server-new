@@ -108,13 +108,13 @@ class StartMatching(AsyncWebsocketConsumer):
             await sync_to_async(match_request.confirm_users.add)(self.user)
             await sync_to_async(match_request.save)()
             await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "send_to_group",
-                "message": f"{self.user.username}님이 매칭을 수락했습니다.",
-                "status": "accepted"
-            }
-        )
+                self.room_group_name,
+                {
+                    "type": "send_to_group",
+                    "message": f"{self.user.username}님이 매칭을 수락했습니다.",
+                    "status": "accepted"
+                }
+            )
         else:
             await self.send(text_data=json.dumps({'status': 'error','message': '이미 매칭을 수락했습니다.'}))
             return
