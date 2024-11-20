@@ -18,7 +18,7 @@ class TaxiWaitingStatusView(MatchingMixin, APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request, *args, **kwargs):
-        response_data = self.get_taxi_waiting_status(self.get_waiting_status_data())
+        response_data = self.get_taxi_waiting_status(request.data)
         return Response(response_data, status=status.HTTP_200_OK)
 
 class TaxiMatchingLocationCheckView(APIView):
@@ -33,7 +33,7 @@ class TaxiMatchingLocationCheckView(APIView):
             return Response({"message": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST)
         
         if check_user_location(starting_point, user_lat, user_lon):
-            return Response({"message": "Location check success"}, status=status.HTTP_200_OK)
+            return Response({"message": "Valid location."}, status=status.HTTP_200_OK)
         else:
-            return Response({"message": "Location check failed"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Invalid loaction."}, status=status.HTTP_400_BAD_REQUEST)
         
