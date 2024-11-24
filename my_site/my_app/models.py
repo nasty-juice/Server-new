@@ -2,7 +2,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
 from django.conf import settings
 from django.db import models
-from chat.models import ChatRoom
 import uuid
 import os
 from .storages import PrivateMediaStorage
@@ -49,9 +48,12 @@ class CustomUser(AbstractUser):
     
     REQUIRED_FIELDS = ['username', 'password'] # Used in createsuperuser command
     
-    join_room = models.ForeignKey(ChatRoom, related_name='users', on_delete=models.SET_NULL, blank=True, null=True)
+    join_room = models.ForeignKey('chat.ChatRoom', related_name='users', on_delete=models.SET_NULL, blank=True, null=True)
     
     temperature = models.DecimalField(max_digits=3, decimal_places=1, default=36.5)
+    
+    invitation = models.ManyToManyField('matching2.InvitationRequest', related_name='invitation', blank=True)
+    channel_name= models.CharField(max_length=100, blank=True, null=True)
     
     def save(self, *args, **kwargs):
         if self.student_card_image:

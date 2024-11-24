@@ -6,6 +6,7 @@ class MatchingQueue(models.Model):
     name = models.CharField(max_length=100)
     users = models.ManyToManyField(CustomUser, related_name='queue',blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    location = models.CharField(max_length=100, default='')
     
     def __str__(self):
         return self.name
@@ -19,3 +20,4 @@ class MatchRequest(models.Model):
     confirm_users = models.ManyToManyField(CustomUser, related_name='confirm_group',blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
+    
