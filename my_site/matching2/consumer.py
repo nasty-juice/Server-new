@@ -76,12 +76,94 @@ class Matching(AsyncWebsocketConsumer):
             await self.send_error(f"Unhandled error: {str(e)}", 500)
     
     async def disconnect(self, close_code):
-        if self.unique_channel_name:
-            await self.channel_layer.group_discard(self.unique_channel_name, self.channel_name)
+        try:
+            # 그룹에서 사용자 제거
+            if self.unique_channel_name:
+                await self.channel_layer.group_discard(self.unique_channel_name, self.channel_name)
+                print(f"Disconnected from group: {self.unique_channel_name}")
+
+            # 초대 상태 확인 및 처리
+            try:
+                # 초대 데이터 가져오기
+                print(self.user.student_number)
+                
+                @sync_to_async
+                def get_user_invitations(user):
+                    # sender_invites와 receiver_invites를 통해 초대 데이터 가져오기
+                    sent_invitations = list(InvitationRequest.objects.filter(sender=user))
+                    received_invitations = list(InvitationRequest.objects.filter(receiver=user))
+                    return sent_invitations + received_invitations
+
+                # 초대 데이터를 가져옴
+                invitations = await get_user_invitations(self.user)
+                print(f"Found {len(invitations)} invitations for user {self.user.student_number}")
+
+                for invitation in invitations:
+                    # 초대 상태를 'cancelled'로 변경
+                    await self.update_invitation_status(invitation, "cancelled")
+                    print(f"Invitation ID {invitation.id} status updated to: cancelled")
+                    # 송신자와 수신자에게 초대 취소 알림 전송
+                    await self.notify_invitation_cancelled(invitation)
+                    print(f"Sent cancellation notification for invitation ID {invitation.id}")
+                    # 초대 삭제
+                    await sync_to_async(invitation.delete)()
+                    print(f"Invitation ID {invitation.id} deleted")
+
+                print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
+            except Exception as e:
+                print(f"Error handling invitations during disconnect: {e}")
+
+            # Redis 키 삭제 및 연결 종료
             if hasattr(self, "redis"):
-                await self.redis.delete(self.unique_channel_name)
-                await self.redis.aclose()
-            
+                try:
+                    await self.redis.delete(self.unique_channel_name)
+                    print(f"Redis key deleted for: {self.unique_channel_name}")
+                except Exception as redis_error:
+                    print(f"Error deleting Redis key: {redis_error}")
+                finally:
+                    await self.redis.aclose()
+                    print("Redis connection closed.")
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
+
+    async def update_invitation_status(self, invitation, status):
+        """초대 상태를 업데이트."""
+        invitation.status = status
+        await sync_to_async(invitation.save)()
+        print(f"Invitation ID {invitation.id} status updated to: {status}")
+
+    async def notify_invitation_cancelled(self, invitation):
+        """송신자와 수신자에게 초대 취소 알림 전송."""
+        sender = await sync_to_async(lambda: invitation.sender)()
+        receiver = await sync_to_async(lambda: invitation.receiver)()
+
+        group_name = await sync_to_async(lambda: invitation.friend_group_channel)()
+        if group_name:
+            await self.channel_layer.group_send(
+                group_name,
+                {
+                    "type": "invitation_cancelled",
+                    "data": {
+                        "invitation_id": invitation.id,
+                        "sender_id": sender.student_number,
+                        "receiver_id": receiver.student_number,
+                    },
+                },
+            )
+        else:
+            print(f"No group_name for invitation ID {invitation.id}")
+
+        print(f"Cancellation notification sent for invitation ID {invitation.id}")
+
+    async def invitation_cancelled(self, event):
+        """초대 취소 이벤트 처리."""
+        data = event["data"]
+        await self.send(text_data=json.dumps({
+            "type": "invitation_cancelled",
+            "data": data
+        }))
+        print(f"Sent cancellation notification for invitation ID {data['invitation_id']}")
+
     async def get_meal_waiting_status(self):
         RESTAURANT_LIST = ['student_center', 'myeongjin', 'staff_cafeteria', 'welfare']
         meal_queues = await database_sync_to_async(list)(
@@ -220,8 +302,10 @@ class Matching(AsyncWebsocketConsumer):
     async def auto_reject_invitation(self, invitation_id):
         await asyncio.sleep(15)
         try:
-            await self.reject_invitation(invitation_id)
-            print(f"Auto-rejected invitation: {invitation_id}")
+            invitation = await self.get_invitation_by_id(invitation_id)
+            if invitation.status == "pending":
+                await self.reject_invitation(invitation_id)
+                print(f"Auto-rejected invitation: {invitation_id}")
         except Exception as e:
             print(f"Error auto-rejecting invitation: {e}")
 
@@ -358,12 +442,6 @@ class Matching(AsyncWebsocketConsumer):
             "data": data
         }))
         
-    async def update_invitation_status(self, invitation, status):
-        """초대 상태를 업데이트."""
-        invitation.status = status
-        await sync_to_async(invitation.save)()
-        print(f"Invitation status updated to: {status}")
-
     async def send_rejection_to_sender(self, invitation):
         """송신자에게 초대 거절 알림을 전송."""
         sender = await sync_to_async(lambda: invitation.sender)()
