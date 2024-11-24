@@ -37,10 +37,10 @@ def get_unknown_fields(data):
     return unknown_fields
 
 # Tesseract 실행 파일 경로 설정 (윈도우 사용자만 필요)
-#pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # Tesseract 실행 파일 경로 설정 (macOS 사용자)
-pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
+# pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
 
 def perform_ocr(image):
     image.seek(0)

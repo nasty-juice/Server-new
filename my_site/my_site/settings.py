@@ -13,7 +13,9 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://f9cc-125-191-254-69.ngrok-free.app"
+NGROK_URL = "https://702e-125-191-254-69.ngrok-free.app"
+NGROK_WEBSOCKET_URL = NGROK_URL.replace("https://", "wss://")
+print(NGROK_WEBSOCKET_URL)
 
 BACKEND_ADDRESS = "127.0.0.1"
 FRONTEND_ADDRESS = "192.168.0.37"
@@ -42,7 +44,7 @@ SECRET_KEY = 'django-insecure-yvjkz7$a2h)4f(dk1euqypf31atbd^ce9s6x2!+&m=$zxkn%9^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = [FRONTEND_ADDRESS, BACKEND_ADDRESS, '.ngrok-free.app', 'localhost', '127.0.0.1',]
 
 
 # Application definition
@@ -78,6 +80,7 @@ INSTALLED_APPS = [
     'my_auth.apps.MyAuthConfig',
     'chat',
     'matching',
+    'matching2.apps.Matching2Config',
     'taxi_matching.apps.TaxiMatchingConfig',
 ]
 
@@ -264,6 +267,8 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [("127.0.0.1", 6379)],
+            # "hosts": [("127.0.0.1", 6380)],
+            "prefix": "asgi",
         },
     },
 }
