@@ -19,25 +19,11 @@ websocket_urlpatterns = [
 ]
 
 #배포할때
-application = ProtocolTypeRouter(
-    {
-        "http": django_asgi_app,
-        "websocket": AllowedHostsOriginValidator(
-            TokenAuthMiddleware(
-                URLRouter(
-                    websocket_urlpatterns,
-                )
-            )
-        ),
-    }
-)
-
-#로컬에서 혼자 작업할때
 # application = ProtocolTypeRouter(
 #     {
 #         "http": django_asgi_app,
 #         "websocket": AllowedHostsOriginValidator(
-#             AuthMiddlewareStack(
+#             TokenAuthMiddleware(
 #                 URLRouter(
 #                     websocket_urlpatterns,
 #                 )
@@ -45,3 +31,17 @@ application = ProtocolTypeRouter(
 #         ),
 #     }
 # )
+
+#로컬에서 혼자 작업할때
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi_app,
+        "websocket": AllowedHostsOriginValidator(
+            AuthMiddlewareStack(
+                URLRouter(
+                    websocket_urlpatterns,
+                )
+            )
+        ),
+    }
+)

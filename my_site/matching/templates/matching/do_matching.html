@@ -54,6 +54,12 @@
             }
             if(data.status == 'confirmed'){
                 //대화방 화면으로 이동
+                chatSocket.send(JSON.stringify({
+                    'action': 'confirmed',
+                }));
+            }
+            if(data.status == 'matchTimer'){
+                console.log(data.message);
             }
         };
 

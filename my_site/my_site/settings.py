@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     # Channels 관련 앱
     'daphne',
     'channels',
+    'django_celery_beat',
 
     # Django 기본 앱
     'django.contrib.admin',
@@ -252,10 +253,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-
-
-
-
 #채널 레이어
 # Daphne
 ASGI_APPLICATION = "my_site.asgi.application"
@@ -267,3 +264,15 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Celery 설정
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_IMPORTS = ('matching.tasks',)
+
+# Celery 6.0 이상 버전에서 브로커 연결 재시도를 설정
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

@@ -7,13 +7,16 @@ from my_app.models import CustomUser
 from chat.models import ChatRoom
 from asgiref.sync import sync_to_async, async_to_sync
 from .utils import get_or_create_queue, check_user_in_queue, update_users_join_room, get_match_request, update_queue_size
+from matching.tasks import delete_chat_room 
 import asyncio
-NEED_USERNUM = 2
+
+NEED_USERNUM = 1
 
 class StartMatching(AsyncWebsocketConsumer):
     async def connect(self):
         self.location = self.scope["url_route"]["kwargs"]["location"]
         self.user = self.scope["user"]
+        self.confirmed = False
         if self.user.is_anonymous:
             #
             return
@@ -51,6 +54,13 @@ class StartMatching(AsyncWebsocketConsumer):
             case 'cancel_matching':
                 print(f"매칭 취소 요청: {self.user}")
                 await self.cancel_matching()
+                return
+            case 'confirmed':
+                await self.channel_layer.group_discard(
+                    self.room_group_name,
+                    self.channel_name
+                )
+                self.confirmed = True
                 return
             
     
@@ -107,7 +117,7 @@ class StartMatching(AsyncWebsocketConsumer):
             return
         
         user_exist = await sync_to_async(lambda: match_request.confirm_users.filter(id=self.user.id).exists())()
-        
+        print(f"match_request: {match_request.name}")
         if not user_exist:
             await sync_to_async(match_request.confirm_users.add)(self.user)
             await sync_to_async(match_request.save)()
@@ -129,9 +139,12 @@ class StartMatching(AsyncWebsocketConsumer):
             all_users = await sync_to_async(lambda: list(match_request.confirm_users.all()))()
             chat_room_name = f"{match_request.location_name}_{uuid.uuid4()}"
             chat_room = await sync_to_async(lambda: ChatRoom.objects.create(name=chat_room_name))()
+            try:
+                delete_chat_room.apply_async((chat_room.name,), countdown=3600)
+            except Exception as e:
+                print(f"delete_chat_room task 실행 중 오류 발생: {e}")
             
-            #ChatRoom에 모든 사용자 추가
-            #await self.add_users_to_chat_room(chat_room, all_users)
+            await sync_to_async(match_request.delete)()
             
             # 모든 사용자의 join_room 필드를 업데이트
             await update_users_join_room(all_users, chat_room)
@@ -143,8 +156,6 @@ class StartMatching(AsyncWebsocketConsumer):
                     "status": "confirmed"
                 }
             )
-            
-            await sync_to_async(match_request.delete)()
     
     async def reject_match(self):
         match_request = await get_match_request(self.new_group_name)
@@ -162,7 +173,7 @@ class StartMatching(AsyncWebsocketConsumer):
                 "status": "rejected"
             }
         )
-        
+       
     #기존 그룹 삭제 후 새로운 그룹 형성 - 각 클라이언트 마다 실행되어야 함
     async def channel_new_group(self, new_group_name):
         await self.channel_layer.group_discard(
@@ -212,6 +223,51 @@ class StartMatching(AsyncWebsocketConsumer):
             }
         )
         
+        # 타이머 설정
+        async def send_timer():
+            for currTime in range(15, 0, -1):
+                if self.confirmed:
+                    return
+                
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "send_to_group",
+                        "message": currTime,
+                        "status": "matchTimer",    
+                    },
+                )
+                await asyncio.sleep(1)
+        
+            match_request = await get_match_request(self.new_group_name)
+            if match_request is not None:
+                await sync_to_async(match_request.delete)()
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        "type": "send_to_group",
+                        "message": "timeOut",
+                        "status": "matchTimer",    
+                    },
+                )
+        
+        asyncio.create_task(send_timer())
+
+    async def send_to_group(self, event):
+        status = event['status']
+        try:
+            response = {
+                "status": status, 
+            }
+            if 'message' in event:
+                response["message"] = event['message']
+            if 'request_name' in event:
+                response["request_name"] = event['request_name']
+            
+            await self.send(text_data=json.dumps(response))
+        except Exception as e:
+            print(f"메시지 전송 실패: {e}") 
+    
     async def create_new_group(self):
         #그룹 전체에 메시지를 전송
         self.new_group_name = f"matching_{self.location}_{uuid.uuid4()}"
@@ -225,22 +281,6 @@ class StartMatching(AsyncWebsocketConsumer):
             }
         )
         
-    async def send_to_group(self, event):
-        status = event['status']
-        try:
-            response = {
-                "status": status, 
-            }
-            
-            if 'message' in event:
-                response["message"] = event['message']
-            if 'request_name' in event:
-                response["request_name"] = event['request_name']
-            
-            await self.send(text_data=json.dumps(response))
-        except Exception as e:
-            print(f"메시지 전송 실패: {e}") 
-    
     async def cancel_matching(self):
         targetQueue = await (get_or_create_queue(self.location))
         await sync_to_async(targetQueue.users.remove)(self.user)
