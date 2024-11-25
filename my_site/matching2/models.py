@@ -67,4 +67,4 @@ class FriendGroup(models.Model):
     
 
     def __str__(self):
-        return f"{self.users}"
+        return f"{self.name} - {self.location}"

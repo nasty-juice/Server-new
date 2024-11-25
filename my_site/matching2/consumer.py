@@ -13,6 +13,7 @@ from .models import InvitationRequest, FriendGroup
 import json
 import asyncio
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,8 @@ class Matching(AsyncWebsocketConsumer):
                     location = text_data_json.get("location")
                     await self.start_matching(location)
                     await self.send_response("start_matching", {})
+                case "disconnect":
+                    await self.disconnect(1000)
                 case _:
                     await self.send_error("Invalid action", 400)
         except Exception as e:
@@ -117,9 +120,7 @@ class Matching(AsyncWebsocketConsumer):
 
             # 초대 상태 확인 및 처리
             try:
-                # 초대 데이터 가져오기
-                # print(self.user.student_number)
-                
+                # 사용자한테 초대장이 있으면 초대장 상태 cancelled 변경 후 초대장 삭제                
                 @sync_to_async
                 def get_user_invitations(user):
                     # sender_invites와 receiver_invites를 통해 초대 데이터 가져오기
@@ -147,15 +148,15 @@ class Matching(AsyncWebsocketConsumer):
                 print(f"Error handling invitations during disconnect: {e}")
 
             # Redis 키 삭제 및 연결 종료
-            if hasattr(self, "redis"):
-                try:
-                    await self.redis.delete(self.unique_channel_name)
-                    print(f"Redis key deleted for: {self.unique_channel_name}")
-                except Exception as redis_error:
-                    print(f"Error deleting Redis key: {redis_error}")
-                finally:
-                    await self.redis.aclose()
-                    print("Redis connection closed.")
+            try:
+                await self.redis.delete(self.unique_channel_name)
+                print(f"Redis key deleted for: {self.unique_channel_name}")
+            except Exception as redis_error:
+                print(f"Error deleting Redis key: {redis_error}")
+            finally:
+                await self.redis.aclose()
+                print("Redis connection closed.")
+
         except Exception as e:
             print(f"Error during disconnect: {e}")
 
@@ -514,24 +515,60 @@ class Matching(AsyncWebsocketConsumer):
         )
 
     async def start_matching(self, loc):
+        # 초대장이 있는지 확인
+        # 초대장 있으면 duo_match
         if await self.check_existing_invitations(self.user):
             await self.send_response("duo_match", {})
+            # todo..
+        # 초대장이 없으면 solo_match
         else:
             await self.send_response("solo_match", {})
+            # 솔로 그룹 생성
+            print("0")
             solo_group = await sync_to_async(FriendGroup.objects.create)(
                 name = f"solo_{self.user.student_number}",
                 status = "solo",
                 location = loc,
                 created_at = timezone.now(),
             )
-            # # 기존 관계 초기화 후 사용자 추가
-            # await sync_to_async(solo_group.users.set)([self.user])
-
-            # # 객체 저장 (필요 없는 경우 생략 가능)
-            # await sync_to_async(solo_group.save)()
-            
+            print("1")
             await sync_to_async(solo_group.users.add)(self.user)
+            print("2")
+            await self.get_or_create_queue(solo_group)
+
+            
+    async def get_or_create_queue(self, group):
+        print("3")
+        # querySet = await sync_to_async(MatchingQueue.objects.filter)(location=group.location)
+        targetQueueList = await database_sync_to_async(list)(MatchingQueue.objects.filter(location=group.location))
+        print("4")
+        print(targetQueueList)
+        
+        # 대기열이 존재하지 않는 경우 대기열 생성
+        if not targetQueueList:
+            print("5")
+            newQueue = await sync_to_async(MatchingQueue.objects.create)(
+                name = f"{group.location}_{uuid.uuid4()}",
+                location = group.location,
+                created_at = timezone.now(),
+            )
+            await sync_to_async(newQueue.groups.add)(group)
+
+
+            # 새로운 대기열에 연결된 그룹의 사용자 수 세기
+            total_users = 0
+            groups = await sync_to_async(list)(newQueue.groups.all())
+            for grp in groups:
+                total_users += await sync_to_async(grp.users.count)()
+            
+            print(f"Queue created: {newQueue}")
+            print(f"Total users in connected groups: {total_users}")
+            
+        # 대기열이 이미 존재하는 경우
+        else:
+            print("6")
+            temp = await sync_to_async(lambda: list(targetQueueList[0].groups.all()))()
+            print(temp)
             
             
-            
-            
+            # print(f"Group size: {groupNum}")            
