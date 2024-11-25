@@ -22,6 +22,8 @@ class Matching(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.user = self.scope["user"]
+
+        #  익명 사용자인 경우 연결 거부
         if self.user.is_anonymous:
             return
         
@@ -29,12 +31,16 @@ class Matching(AsyncWebsocketConsumer):
         self.user.channel_name = self.channel_name
         await sync_to_async(self.user.save)()
 
+        # 유저의 고유 채널 이름 생성
         self.unique_channel_name = f"user_{self.user.student_number}"
-        print(self.unique_channel_name)
+        # print(self.unique_channel_name)
         await self.channel_layer.group_add(
             self.unique_channel_name,
             self.channel_name
         )
+        
+        # 페이지 이름 가져오기
+        self.current_page = None            
         
         await self.accept()
         
@@ -47,13 +53,15 @@ class Matching(AsyncWebsocketConsumer):
                 return
 
             match action:
-                case "get_meal_status":
-                    meal_data = await self.get_meal_waiting_status()
-                    await self.send_response("meal_status", meal_data)
-                
-                case "get_taxi_status":
-                    taxi_data = await self.get_taxi_waiting_status()
-                    await self.send_response("taxi_status", taxi_data)
+                case "join_meal_page":
+                    self.current_page = "meal_page"
+                    asyncio.create_task(self.broadcast_meal_status())
+                    await self.send_response("join_meal_page", {})
+
+                case "join_taxi_page":
+                    self.current_page = "taxi_page"
+                    asyncio.create_task(self.broadcast_taxi_status())
+                    await self.send_response("join_taxi_page", {})
                 
                 case "invite_friend":
                     friend_id = text_data_json.get("friend_id")
@@ -74,6 +82,20 @@ class Matching(AsyncWebsocketConsumer):
                     await self.send_error("Invalid action", 400)
         except Exception as e:
             await self.send_error(f"Unhandled error: {str(e)}", 500)
+    
+    async def broadcast_meal_status(self):
+        """학식 대기 상태를 주기적으로 클라이언트에 전송"""
+        while self.current_page == "meal":
+            meal_data = await self.get_meal_waiting_status()
+            await self.send_response("meal_status", meal_data)
+            await asyncio.sleep(5)  # 5초 간격으로 전송
+
+    async def broadcast_taxi_status(self):
+        """택시 대기 상태를 주기적으로 클라이언트에 전송"""
+        while self.current_page == "taxi":
+            taxi_data = await self.get_taxi_waiting_status()
+            await self.send_response("taxi_status", taxi_data)
+            await asyncio.sleep(5)
     
     async def disconnect(self, close_code):
         try:
