@@ -85,14 +85,14 @@ class Matching(AsyncWebsocketConsumer):
     
     async def broadcast_meal_status(self):
         """학식 대기 상태를 주기적으로 클라이언트에 전송"""
-        while self.current_page == "meal":
+        while self.current_page == "meal_page":
             meal_data = await self.get_meal_waiting_status()
             await self.send_response("meal_status", meal_data)
             await asyncio.sleep(5)  # 5초 간격으로 전송
 
     async def broadcast_taxi_status(self):
         """택시 대기 상태를 주기적으로 클라이언트에 전송"""
-        while self.current_page == "taxi":
+        while self.current_page == "taxi_page":
             taxi_data = await self.get_taxi_waiting_status()
             await self.send_response("taxi_status", taxi_data)
             await asyncio.sleep(5)
@@ -107,7 +107,7 @@ class Matching(AsyncWebsocketConsumer):
             # 초대 상태 확인 및 처리
             try:
                 # 초대 데이터 가져오기
-                print(self.user.student_number)
+                # print(self.user.student_number)
                 
                 @sync_to_async
                 def get_user_invitations(user):
@@ -129,7 +129,7 @@ class Matching(AsyncWebsocketConsumer):
                     print(f"Sent cancellation notification for invitation ID {invitation.id}")
                     # 초대 삭제
                     await sync_to_async(invitation.delete)()
-                    print(f"Invitation ID {invitation.id} deleted")
+                    print(f"Invitation deleted")
 
                 print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
             except Exception as e:
@@ -152,7 +152,7 @@ class Matching(AsyncWebsocketConsumer):
         """초대 상태를 업데이트."""
         invitation.status = status
         await sync_to_async(invitation.save)()
-        print(f"Invitation ID {invitation.id} status updated to: {status}")
+        # print(f"Invitation ID {invitation.id} status updated to: {status}")
 
     async def notify_invitation_cancelled(self, invitation):
         """송신자와 수신자에게 초대 취소 알림 전송."""
@@ -169,13 +169,14 @@ class Matching(AsyncWebsocketConsumer):
                         "invitation_id": invitation.id,
                         "sender_id": sender.student_number,
                         "receiver_id": receiver.student_number,
+                        "message": "Invitation has been cancelled. Friend disconnected.",
                     },
                 },
             )
         else:
             print(f"No group_name for invitation ID {invitation.id}")
 
-        print(f"Cancellation notification sent for invitation ID {invitation.id}")
+        # print(f"Cancellation notification sent for invitation ID {invitation.id}")
 
     async def invitation_cancelled(self, event):
         """초대 취소 이벤트 처리."""

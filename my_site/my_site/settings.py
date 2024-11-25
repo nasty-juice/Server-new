@@ -13,7 +13,7 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://52a4-117-17-163-48.ngrok-free"
+NGROK_URL = "https://91dd-117-17-163-48.ngrok-free.app"
 NGROK_WEBSOCKET_URL = NGROK_URL.replace("https://", "wss://")
 print(NGROK_WEBSOCKET_URL)
 
