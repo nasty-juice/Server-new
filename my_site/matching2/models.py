@@ -16,7 +16,6 @@ class InvitationRequest(models.Model):
         null=True,
         blank=True
     )
-    
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
         max_length=20,
@@ -28,16 +27,44 @@ class InvitationRequest(models.Model):
         ),
         default="pending"
     )  # 초대 상태
-
     friend_group_channel = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return f"{self.sender} -> {self.receiver} ({self.status})"
     
 class FriendGroup(models.Model):
-    name = models.CharField(max_length=100)
-    users = models.ManyToManyField(CustomUser, related_name='friend_group',blank=True)
+    name = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    users = models.ManyToManyField(CustomUser, related_name='users',blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    location = models.CharField(
+        max_length=100,
+        choices=(
+            ("myeongjin", "명진당"),
+            ("student_center", "학생회관"),
+            ("staff_cafeteria", "교직원식당"),
+            ("welfare", "복지동"), 
+            ("station_to_mju", "기흥 -> 명지대"),
+            ("mju_to_station", "명지대 -> 기흥"),
+            ("none", "None"),
+        ),
+        default="none",
+        blank=True,
+        null=True,
+    )
+    friend_group_channel = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=(
+            ("solo", "Solo"),
+            ("duo", "Duo"),
+            ("none", "None"),
+            
+        ),
+        default="none",
+        null=True,
+        blank=True,
+    )
     
+
     def __str__(self):
-        return self.name
+        return f"{self.users}"

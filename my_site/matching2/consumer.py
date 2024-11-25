@@ -1,14 +1,17 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-import json
-from matching.models import MatchingQueue
-from asgiref.sync import sync_to_async
-from .models import InvitationRequest
-from django.utils import timezone
-from my_app.models import CustomUser
 from redis import asyncio as aioredis
-import asyncio
+from asgiref.sync import sync_to_async
+
+from django.utils import timezone
 from django.conf import settings
+
+from matching.models import MatchingQueue
+from my_app.models import CustomUser
+from .models import InvitationRequest, FriendGroup
+
+import json
+import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
@@ -48,19 +51,21 @@ class Matching(AsyncWebsocketConsumer):
         try:
             text_data_json = json.loads(text_data)
             action = text_data_json.get("action")
+            print(action)
             if not action:
                 await self.send_error("Invalid action", 400)
                 return
-
+            
             match action:
                 case "join_meal_page":
                     self.current_page = "meal_page"
-                    asyncio.create_task(self.broadcast_meal_status())
+                    # print("Joined meal page")
+                    # asyncio.create_task(self.broadcast_meal_status())
                     await self.send_response("join_meal_page", {})
 
                 case "join_taxi_page":
                     self.current_page = "taxi_page"
-                    asyncio.create_task(self.broadcast_taxi_status())
+                    # asyncio.create_task(self.broadcast_taxi_status())
                     await self.send_response("join_taxi_page", {})
                 
                 case "invite_friend":
@@ -78,24 +83,30 @@ class Matching(AsyncWebsocketConsumer):
                     invitation_id = text_data_json.get("invitation_id")
                     await self.reject_invitation(invitation_id)
                 
+                case "start_matching":
+                    location = text_data_json.get("location")
+                    await self.start_matching(location)
+                    await self.send_response("start_matching", {})
                 case _:
                     await self.send_error("Invalid action", 400)
         except Exception as e:
             await self.send_error(f"Unhandled error: {str(e)}", 500)
     
     async def broadcast_meal_status(self):
+        pass
         """학식 대기 상태를 주기적으로 클라이언트에 전송"""
-        while self.current_page == "meal_page":
-            meal_data = await self.get_meal_waiting_status()
-            await self.send_response("meal_status", meal_data)
-            await asyncio.sleep(5)  # 5초 간격으로 전송
+        # while self.current_page == "meal_page":
+        #     meal_data = await self.get_meal_waiting_status()
+        #     await self.send_response("meal_status", meal_data)
+        #     await asyncio.sleep(5)  # 5초 간격으로 전송
 
     async def broadcast_taxi_status(self):
-        """택시 대기 상태를 주기적으로 클라이언트에 전송"""
-        while self.current_page == "taxi_page":
-            taxi_data = await self.get_taxi_waiting_status()
-            await self.send_response("taxi_status", taxi_data)
-            await asyncio.sleep(5)
+        pass
+        # """택시 대기 상태를 주기적으로 클라이언트에 전송"""
+        # while self.current_page == "taxi_page":
+        #     taxi_data = await self.get_taxi_waiting_status()
+        #     await self.send_response("taxi_status", taxi_data)
+        #     await asyncio.sleep(5)
     
     async def disconnect(self, close_code):
         try:
@@ -221,7 +232,7 @@ class Matching(AsyncWebsocketConsumer):
                 return
             
              # 초대 상태 확인
-            await self.check_existing_invitations(self.user, friend)
+            await self.check_both_existing_invitations(self.user, friend)
 
             # 초대 생성
             invitation = await self.create_invitation(self.user, friend)
@@ -276,7 +287,18 @@ class Matching(AsyncWebsocketConsumer):
         await sync_to_async(user.save)()
         return invitation
 
-    async def check_existing_invitations(self, user, friend):
+    async def check_existing_invitations(self, user):
+        """Check for existing invitations."""
+        if await sync_to_async(user.sent_invites.exists)():
+            print("You have invitation.")
+            return True
+        
+        if await sync_to_async(user.received_invites.exists)():
+            print("You have invitation.")
+            return True
+        return False
+
+    async def check_both_existing_invitations(self, user, friend):
         """Check for existing invitations for both sender and receiver."""
         sender_to_receiver = await sync_to_async(InvitationRequest.objects.filter)(receiver=friend, sender=user)
         receiver_to_sender = await sync_to_async(InvitationRequest.objects.filter)(receiver=user, sender=friend)
@@ -372,8 +394,18 @@ class Matching(AsyncWebsocketConsumer):
                     "type": "invitation_accepted",
                     "data": {
                         "invitation_id": invitation.id,
-                        "sender_id": invitation.sender.student_number,
-                        "receiver_id": invitation.receiver.student_number,
+                        "sender": {
+                            "id": invitation.sender.student_number,
+                            "name": invitation.sender.username,
+                            "department": invitation.sender.department,
+                            "temperature": str(invitation.sender.temperature),
+                        },
+                        "receiver": {
+                            "id": invitation.receiver.student_number,
+                            "name": invitation.receiver.username,
+                            "department": invitation.receiver.department,
+                            "temperature": str(invitation.receiver.temperature),
+                        },    
                         "group_name": group_name,
                     },
                 },
@@ -480,3 +512,26 @@ class Matching(AsyncWebsocketConsumer):
                 },
             },
         )
+
+    async def start_matching(self, loc):
+        if await self.check_existing_invitations(self.user):
+            await self.send_response("duo_match", {})
+        else:
+            await self.send_response("solo_match", {})
+            solo_group = await sync_to_async(FriendGroup.objects.create)(
+                name = f"solo_{self.user.student_number}",
+                status = "solo",
+                location = loc,
+                created_at = timezone.now(),
+            )
+            # # 기존 관계 초기화 후 사용자 추가
+            # await sync_to_async(solo_group.users.set)([self.user])
+
+            # # 객체 저장 (필요 없는 경우 생략 가능)
+            # await sync_to_async(solo_group.save)()
+            
+            await sync_to_async(solo_group.users.add)(self.user)
+            
+            
+            
+            
