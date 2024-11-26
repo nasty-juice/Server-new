@@ -1,27 +1,12 @@
 import json
-import logging
-import os
-import base64
 
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.fernet import Fernet
 from channels.generic.websocket import AsyncWebsocketConsumer
-from channels.db import database_sync_to_async
+from channels.layers import get_channel_layer
 from .models import ChatMessage, ChatRoom
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
-from dotenv import load_dotenv
-from my_site.settings import BASE_DIR
-# .env 파일을 로드
-load_dotenv()
-
-logger = logging.getLogger(__name__)
-
-#개인 키 불러오기
-private_key_path = os.path.join(BASE_DIR, "keys", "private_key.pem")
-with open(private_key_path, "rb") as f:
-    private_key = serialization.load_pem_private_key(f.read(),password=None)
+from .temperature import add_temperature_change, apply_temperature_changes
+from .utils import check_all_user_in_chatroom, get_db_chatroom_messages, encrypt_message, decrypt_message
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -30,12 +15,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         print(f'room_name : {self.room_name}')
         print(f'user : {self.user}')
-        
-        # 사용자가 인증되지 않은 경우 기본 사용자 정보 생성
-        # if self.scope["user"].is_anonymous:
-        #     self.user = await self.get_or_create_user("default_user", "default_user@example.com")
-        # else:
-        #     self.user = self.scope["user"]
 
         #ChatRoom 확인
         chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
@@ -43,7 +22,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         user_join_room = await sync_to_async(lambda: self.user.join_room)()
         
         if user_join_room is None or user_join_room != chatRoom:
-            logger.warning("방 권한이 없습니다.")
+            print("방 권한이 없습니다.")
             await self.close()
             return
         
@@ -52,62 +31,56 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name, 
             self.channel_name
         )
+        print(f"room_group_name : {self.room_group_name}")
+        print(f"channel_layer : {self.channel_layer}")
         
         #웹 소켓 접속 승인
         await self.accept()
-
+        #방에 있는 유저 가져오기
+        users = await sync_to_async(check_all_user_in_chatroom)(chatRoom)
         #방에 있는 기존 메시지 불러오기
-        messages = await self.get_messages()
-        decrypted_messages = []
-        for message in messages:
-            try:
-                encrypted_message = message.message
-                decrypted_message = private_key.decrypt(
-                    encrypted_message,
-                    padding.OAEP(
-                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                        algorithm=hashes.SHA256(),
-                        label=None
-                    )
-                ).decode()
-                
-                decrypted_messages.append({
-                    'user_name' : message.user.username,
-                    'message' : decrypted_message,
-                    'timestamp' : message.created_at.isoformat()
-                })
-                print(f"복호화된 메시지: {decrypted_message}")
-            except Exception as e:
-                logger.warning(f"메시지 복호화 실패: {e}")
-                
+        try:
+            decrypted_messages = await sync_to_async(get_db_chatroom_messages)(chatRoom)
+        except Exception as e:
+            print(f"메시지 불러오기 실패: {e}")
+            return
+        #클라이언트에 메시지 전송
+        await self.send(text_data=json.dumps({'messages': users, 'action': 'userInfo'}))
         await self.send(text_data=json.dumps({'messages': decrypted_messages}))
     
     async def disconnect(self, close_code):
-        # Leave room group
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-
-    # Receive message from WebSocket
+        #그룹에서 제거
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "chat_message",
+                "message": "채팅방이 비활성화 되었습니다."
+            }
+        )
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+    
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
         
-        #공개키 불러오기
-        public_key_path = os.path.join(BASE_DIR, "keys", "public_key.pem")
-        with open(public_key_path, "rb") as f:
-            public_key = serialization.load_pem_public_key(f.read())
-        #메시지 암호화
-        encrypted_message = public_key.encrypt(
-            str(message).encode(),
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        )
-    
+        if message == 'temperature':
+            usernum = text_data_json["targetUserNum"]
+            action = text_data_json["action"]
+            chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
+            await add_temperature_change(chatRoom, self.user.student_number, usernum, action)
+            return
+        #지워야 함 -> 클라이언트 부분도 같이
+        elif message == 'test':
+            
+            chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
+            await sync_to_async(apply_temperature_changes)(chatRoom)
+        
+        encrypted_message = await sync_to_async(encrypt_message)(message)
         #메시지를 서버에 저장
         chat_message = await self.save_message(encrypted_message)
-        
         # Send message to room group
         await self.channel_layer.group_send(
             self.room_group_name, {
@@ -118,23 +91,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
-    # Receive message from room group
+    #group send 타겟 메서드
     async def chat_message(self, event):
         encrypted_message = event["message"]
-        #복호화
-        try:    
-            decrypted_message = private_key.decrypt(
-                encrypted_message,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
-                )
-            ).decode()
-        except Exception as e:
-            logger.warning(f"메시지 복호화 실패: {e}")
-            return
-
+        decrypted_message = await sync_to_async(decrypt_message)(encrypted_message)
         #클라이언트에 메시지 전송
         try:
             await self.send(text_data=json.dumps({
@@ -143,29 +103,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'timestamp' : event['timestamp']
             }))
         except Exception as e:
-            logger.warning(f"메시지 전송 실패: {e}")
+            print(f"메시지 전송 실패: {e}")
     
+    #시스템 메시지
+    async def send_to_group(self, event):
+        status = event['status']
+        message = event['message']
+        encrypted_message = await sync_to_async(encrypt_message)(message)
+        await self.save_message(encrypted_message, True)
+        # WebSocket에 메시지 전송
+        await self.send(text_data=json.dumps({
+            "action": status,
+            "message": message
+        }))
+        
+    #db에 메시지 저장
     @sync_to_async
-    def save_message(self, message):
+    def save_message(self, message, is_system=False):
         try:
             chat_room = ChatRoom.objects.get(name=self.room_name)
-            chat_message = ChatMessage.objects.create(chat_room=chat_room, user=self.user ,message=message)
+            chat_message = ChatMessage.objects.create(chat_room=chat_room ,message=message, is_system=is_system)
+            if not is_system:
+               chat_message.user = self.user
+            
             return chat_message.created_at.isoformat()
         except ObjectDoesNotExist:
-            print(f"chatRoom '{self.room_name}' does not exist.")
-    
-    @sync_to_async
-    def get_messages(self):
-        try:
-            chat_room = ChatRoom.objects.get(name=self.room_name)
-            messages = ChatMessage.objects.filter(chat_room=chat_room).order_by('created_at')
-            print(f'chatRoom Num : {chat_room.name}')
-            
-            for msg in messages:
-                print(f'{msg.user.username} : {msg.message}')
-            
-            return messages
-        except ObjectDoesNotExist:
-            return []
+            print(f"chatRoom '{self.room_name}' does not exist.")        
 
     

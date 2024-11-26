@@ -197,7 +197,7 @@ class Matching(AsyncWebsocketConsumer):
                 await self.send_error("Friend is not connected", 404)
                 return
             
-             # 초대 상태 확인
+            # 초대 상태 확인
             await self.check_existing_invitations(self.user, friend)
 
             # 초대 생성

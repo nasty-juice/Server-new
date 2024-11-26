@@ -7,7 +7,8 @@ from my_app.models import CustomUser
 from chat.models import ChatRoom
 from asgiref.sync import sync_to_async, async_to_sync
 from .utils import get_or_create_queue, check_user_in_queue, update_users_join_room, get_match_request, update_queue_size
-from matching.tasks import delete_chat_room 
+from matching.tasks import delete_chat_room
+from chat.chat_bot import chat_send_time_message
 import asyncio
 
 NEED_USERNUM = 1
@@ -34,7 +35,7 @@ class StartMatching(AsyncWebsocketConsumer):
         
         #웹 소켓 연결시 바로 실행
         await self.start_match()
-
+        
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         action = text_data_json['action']
@@ -139,10 +140,20 @@ class StartMatching(AsyncWebsocketConsumer):
             all_users = await sync_to_async(lambda: list(match_request.confirm_users.all()))()
             chat_room_name = f"{match_request.location_name}_{uuid.uuid4()}"
             chat_room = await sync_to_async(lambda: ChatRoom.objects.create(name=chat_room_name))()
+            
+            # try:
+            #     delete_chat_room.apply_async((chat_room_name,), countdown=20)
+            # except Exception as e:
+            #     print(f"delete_chat_room task 실행 중 오류 발생: {e}")
+            
+            #중간 채팅방 텍스트 전송
             try:
-                delete_chat_room.apply_async((chat_room.name,), countdown=3600)
+                chat_send_time_message.apply_async((f"chat_{chat_room_name}", "10초가 지났습니다." ), countdown=10)
+                chat_send_time_message.apply_async((f"chat_{chat_room_name}", "20초가 지났습니다." ), countdown=20)
+                chat_send_time_message.apply_async((f"chat_{chat_room_name}", "30초가 지났습니다." ), countdown=30)
             except Exception as e:
-                print(f"delete_chat_room task 실행 중 오류 발생: {e}")
+                print(f'chat_send_time_message task 실행 중 오류 발생: {e}')
+                
             
             await sync_to_async(match_request.delete)()
             
@@ -255,6 +266,15 @@ class StartMatching(AsyncWebsocketConsumer):
 
     async def send_to_group(self, event):
         status = event['status']
+        
+        if status == "SYSTEM":
+            response = {
+                "status": status,
+                "message": event['message'],
+            }
+            await self.send(text_data=json.dumps(response))
+            return
+        
         try:
             response = {
                 "status": status, 

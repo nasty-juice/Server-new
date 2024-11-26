@@ -5,9 +5,17 @@
 </head>
 <body>
     <h1>{{ room_name }}</h1>
+    <textarea id="user-log" cols="30" rows="4"></textarea><br>
     <textarea id="chat-log" cols="100" rows="20"></textarea><br>
     <input id="chat-message-input" type="text" size="100"><br>
     <input id="chat-message-submit" type="button" value="Send">
+    <div>
+        <button id="temperature-up">yoon 매너온도 상승</button>
+        <button id="temperature-down">yoon 매너온도 하락</button>
+    </div>
+    <div>
+        <button id="test">매너온도 적용</button>
+    </div>
     {% comment %} GET: 이름, 학번, 메시지, 시간 {% endcomment %}
     <script>
         const roomName = "{{ room_name }}";
@@ -22,15 +30,26 @@
 
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            if(Array.isArray(data.messages)){
+            console.log(data);
+            if(data.action == 'userInfo'){
                 data.messages.forEach(msg => {
-                    const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                    document.querySelector('#chat-log').value += (msg.user_name + ':' + msg.message + ' - ' + timestamp + '\n');
+                    document.querySelector('#user-log').value += (msg.user_name + ':' + msg.user_number + ' - ' + msg.user_temperature + '\n');
                 })
             }
+            else if(data.action == 'SYSTEM'){
+                    document.querySelector('#chat-log').value += data.action + ':' + data.message + '\n';
+            }
             else{
-                const timestamp = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-                document.querySelector('#chat-log').value += (data.user_name + ':' + data.message + ' - ' + timestamp + '\n');
+                if(Array.isArray(data.messages)){
+                    data.messages.forEach(msg => {
+                        const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                        document.querySelector('#chat-log').value += (msg.user_name + ':' + msg.message + ' - ' + timestamp + '\n');
+                    })
+                }
+                else{
+                    const timestamp = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+                    document.querySelector('#chat-log').value += (data.user_name + ':' + data.message + ' - ' + timestamp + '\n');
+                }
             }
         };
 
@@ -61,6 +80,29 @@
             }));
             messageInputDom.value = '';
         };
+
+        document.getElementById("temperature-up").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'action': 'up',
+                'message': 'temperature',
+                'targetUserNum' : 60212216,
+            }));
+        };
+
+        document.getElementById("temperature-down").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'action': 'down',
+                'message': 'temperature',
+                'targetUserNum' : 60212216,
+            }));
+        };
+
+        document.getElementById("test").onclick = function() {
+            chatSocket.send(JSON.stringify({
+                'message': 'test',
+            }));
+        };
+
     </script>
 </body>
 </html>
