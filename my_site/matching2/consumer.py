@@ -120,6 +120,7 @@ class Matching(AsyncWebsocketConsumer):
 
             # 초대 상태 확인 및 처리
             try:
+                
                 # 사용자한테 초대장이 있으면 초대장 상태 cancelled 변경 후 초대장 삭제                
                 @sync_to_async
                 def get_user_invitations(user):
@@ -132,21 +133,52 @@ class Matching(AsyncWebsocketConsumer):
                 invitations = await get_user_invitations(self.user)
                 print(f"Found {len(invitations)} invitations for user {self.user.student_number}")
 
-                for invitation in invitations:
-                    # 초대 상태를 'cancelled'로 변경
-                    await self.update_invitation_status(invitation, "cancelled")
-                    print(f"Invitation ID {invitation.id} status updated to: cancelled")
-                    # 송신자와 수신자에게 초대 취소 알림 전송
-                    await self.notify_invitation_cancelled(invitation)
-                    print(f"Sent cancellation notification for invitation ID {invitation.id}")
-                    # 초대 삭제
-                    await sync_to_async(invitation.delete)()
-                    print(f"Invitation deleted")
+                if invitations:
+                    for invitation in invitations:
+                        # 초대 상태를 'cancelled'로 변경
+                        await self.update_invitation_status(invitation, "cancelled")
+                        print(f"Invitation ID {invitation.id} status updated to: cancelled")
+                        # 송신자와 수신자에게 초대 취소 알림 전송
+                        await self.notify_invitation_cancelled(invitation)
+                        print(f"Sent cancellation notification for invitation ID {invitation.id}")
+                        # 초대 삭제
+                        await sync_to_async(invitation.delete)()
+                        print(f"Invitation deleted")
 
-                print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
+                    print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
             except Exception as e:
                 print(f"Error handling invitations during disconnect: {e}")
 
+            # working on when friend disconnects from the group
+            try:
+                # 사용자가 속한 모든 그룹 가져오기
+                friend_groups = await sync_to_async(list)(FriendGroup.objects.filter(users=self.user))
+                print(f"Found {len(friend_groups)} friend groups")
+                
+                # 그룹 내 사용자 제거 및 그룹 삭제 처리
+                for friend_group in friend_groups:
+                    # 그룹 내에 사용자가 포함된 경우 확인
+                    user_in_group = await sync_to_async(friend_group.users.filter(id=self.user.id).exists)()
+                    if user_in_group:
+                        print(f"User {self.user.student_number} is in friend group: {friend_group.name}")
+                        self.channel_layer.group_send(
+                            friend_group.friend_group_channel,
+                            {
+                                "type": "user_disconnected",
+                                "data": {
+                                    "disconnected_user": self.user.student_number,
+                                    "message": "User has disconnected.",
+                                },
+                            },
+                        )
+                        await sync_to_async(friend_group.delete)()
+                    else:
+                        print(f"User {self.user.student_number} is not in friend group: {friend_group.name}")
+            except Exception as e:
+                # 예외 처리
+                print(f"Error handling friend group during disconnect: {e}")
+                        
+            
             # Redis 키 삭제 및 연결 종료
             try:
                 await self.redis.delete(self.unique_channel_name)
@@ -198,6 +230,15 @@ class Matching(AsyncWebsocketConsumer):
             "data": data
         }))
         print(f"Sent cancellation notification for invitation ID {data['invitation_id']}")
+
+    async def user_disconnected(self, event):
+        """사용자 연결 해제 이벤트 처리."""
+        data = event["data"]
+        await self.send(text_data=json.dumps({
+            "type": "user_disconnected",
+            "data": data
+        }))
+        print(f"Sent user disconnected notification for user {data['disconnected_user']}")
 
     async def get_meal_waiting_status(self):
         RESTAURANT_LIST = ['student_center', 'myeongjin', 'staff_cafeteria', 'welfare']
