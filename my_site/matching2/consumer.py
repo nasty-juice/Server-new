@@ -9,6 +9,7 @@ from django.conf import settings
 from matching.models import MatchingQueue
 from my_app.models import CustomUser
 from .models import InvitationRequest, FriendGroup
+from .utils import get_user_in_queue, Timer
 
 import json
 import asyncio
@@ -711,26 +712,30 @@ class Matching(AsyncWebsocketConsumer):
             
             if current_usernum_in_queue == MAX_Q_SIZE:
                 print("Queue is full")
-                await self.ask_member_to_join_room()
+                await self.ask_member_to_join_room(queue)
                 break
                 
-    async def ask_member_to_join_room(self):
+    async def ask_member_to_join_room(self,targetQuque):
+        userData = await get_user_in_queue(targetQuque)
         # queue에 연결된 모든 groups 가져오기
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 "type": "ask_join_room",
-                "message": "The queue is full. Would you like to join the room?",
+                "message": userData,
                 "status": "matched",
             }
         )
         
-
-            
+        asyncio.create_task(Timer(self).send_timer())
+        
     async def ask_join_room(self, event):
         print("Asking user to join room")
         message = event["message"]
         await self.send_response("ask_join_room", {"message": message})
+        
+    
+    
 
     
                     
