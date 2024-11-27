@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from .temperature import add_temperature_change, apply_temperature_changes
 from .utils import check_all_user_in_chatroom, get_db_chatroom_messages, encrypt_message, decrypt_message
 
+
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
@@ -64,19 +65,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json["message"]
         
-        if message == 'temperature':
-            usernum = text_data_json["targetUserNum"]
-            action = text_data_json["action"]
-            chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
-            await add_temperature_change(chatRoom, self.user.student_number, usernum, action)
+        if "message" in text_data_json:
+            message = text_data_json["message"]
+            if message == 'temperature':
+                usernum = text_data_json["targetUserNum"]
+                action = text_data_json["action"]
+                chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
+                await add_temperature_change(chatRoom, self.user.student_number, usernum, action)
+                return
+            #지워야 함 -> 클라이언트 부분도 같이
+            elif message == 'test':
+                chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
+                await sync_to_async(apply_temperature_changes)(chatRoom)
+        
+        if "action" in text_data_json and text_data_json["action"] == "disconnect":
+            await self.disconnect(1000)
             return
-        #지워야 함 -> 클라이언트 부분도 같이
-        elif message == 'test':
-            
-            chatRoom = await sync_to_async(lambda: ChatRoom.objects.get(name=self.room_name))()
-            await sync_to_async(apply_temperature_changes)(chatRoom)
         
         encrypted_message = await sync_to_async(encrypt_message)(message)
         #메시지를 서버에 저장
@@ -124,10 +129,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             chat_room = ChatRoom.objects.get(name=self.room_name)
             chat_message = ChatMessage.objects.create(chat_room=chat_room ,message=message, is_system=is_system)
             if not is_system:
-               chat_message.user = self.user
+                chat_message.user = self.user
+                chat_message.save()
             
             return chat_message.created_at.isoformat()
         except ObjectDoesNotExist:
             print(f"chatRoom '{self.room_name}' does not exist.")        
-
     
