@@ -424,6 +424,13 @@ class Matching(AsyncWebsocketConsumer):
             invitation = await self.get_invitation_by_id(invitation_id)
             invitation.status = "accepted"
             await sync_to_async(invitation.save)()
+            
+            sender = await sync_to_async(lambda: invitation.sender)()
+            receiver = await sync_to_async(lambda: invitation.receiver)()
+            
+            await sync_to_async(sender.invitation.add)(invitation)
+            await sync_to_async(receiver.invitation.add)(invitation)
+            
 
             # 관련 초대 삭제
             await self.delete_other_invitations(invitation)
@@ -457,7 +464,8 @@ class Matching(AsyncWebsocketConsumer):
         except InvitationRequest.DoesNotExist:
             await self.send_error("Invitation not found", 404)
         except Exception as e:
-            print(f"Error accepting invitation: {e}")
+            # print(f"Error accepting invitation: {e}")
+            logger.error(f"Error accepting invitation: {e}")
             await self.send_error(f"Failed to accept invitation: {str(e)}", 500)
     
     async def get_invitation_by_id(self, invitation_id):
@@ -557,14 +565,24 @@ class Matching(AsyncWebsocketConsumer):
             },
         )
 
+    @database_sync_to_async
+    def get_invitation(self):
+        invitation = self.user.invitation.first()
+        print(invitation)
+        return invitation
+
     async def start_matching(self, loc):
         # 초대장이 있는지 확인
         # 초대장 있으면 duo_match
         if await self.check_existing_invitations(self.user):
             await self.send_response("duo_match", {})
             print("Duo match start") 
+
+            invitation = await self.get_invitation()
+            print(invitation.friend_group_channel)
+            
             duo_group = await sync_to_async(FriendGroup.objects.create)(
-                # name = f"duo_{duo_group_name}",
+                name = f"duo_{invitation.friend_group_channel}",
                 status = "duo",
                 location = loc,
                 created_at = timezone.now(),

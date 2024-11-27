@@ -20,5 +20,6 @@ class CustomUserAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'email') 
     
     search_fields = ('email', 'student_number')
-
+    filter_horizontal = ('invitation',)
+    
 admin.site.register(CustomUser, CustomUserAdmin)
