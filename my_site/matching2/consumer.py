@@ -16,6 +16,7 @@ import logging
 import uuid
 
 logger = logging.getLogger(__name__)
+MAX_Q_SIZE = 3
 
 class Matching(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -331,11 +332,12 @@ class Matching(AsyncWebsocketConsumer):
 
     async def check_existing_invitations(self, user):
         """Check for existing invitations."""
-        if await sync_to_async(user.sent_invites.exists)():
+        print("HI")
+        if await sync_to_async(self.user.sent_invites.exists)():
             print("You have invitation.")
             return True
         
-        if await sync_to_async(user.received_invites.exists)():
+        if await sync_to_async(self.user.received_invites.exists)():
             print("You have invitation.")
             return True
         return False
@@ -560,7 +562,16 @@ class Matching(AsyncWebsocketConsumer):
         # 초대장 있으면 duo_match
         if await self.check_existing_invitations(self.user):
             await self.send_response("duo_match", {})
-            # todo..
+            print("Duo match start") 
+            duo_group = await sync_to_async(FriendGroup.objects.create)(
+                # name = f"duo_{duo_group_name}",
+                status = "duo",
+                location = loc,
+                created_at = timezone.now(),
+            )
+            print(f"Duo group created: {duo_group.name}")
+            await sync_to_async(duo_group.delete)()
+            
         # 초대장이 없으면 solo_match
         else:
             await self.send_response("solo_match", {})
@@ -577,13 +588,18 @@ class Matching(AsyncWebsocketConsumer):
             print("2")
             await self.get_or_create_queue(solo_group)
 
-            
     async def get_or_create_queue(self, group):
         print("3")
-        # querySet = await sync_to_async(MatchingQueue.objects.filter)(location=group.location)
+        # location에 해당하는 현재 대기열 targetQueueList 가져오기
         targetQueueList = await database_sync_to_async(list)(MatchingQueue.objects.filter(location=group.location))
         print("4")
         print(targetQueueList)
+        
+        # 현재 매칭 시작하기를 누른 그룹 안의 유저 수 세기
+        usernum_in_group = await sync_to_async(group.users.count)()
+        print(f"User number in group: {usernum_in_group}")
+        
+        group_added = False
         
         # 대기열이 존재하지 않는 경우 대기열 생성
         if not targetQueueList:
@@ -594,22 +610,56 @@ class Matching(AsyncWebsocketConsumer):
                 created_at = timezone.now(),
             )
             await sync_to_async(newQueue.groups.add)(group)
-
-
-            # 새로운 대기열에 연결된 그룹의 사용자 수 세기
-            total_users = 0
-            groups = await sync_to_async(list)(newQueue.groups.all())
-            for grp in groups:
-                total_users += await sync_to_async(grp.users.count)()
-            
-            print(f"Queue created: {newQueue}")
-            print(f"Total users in connected groups: {total_users}")
+            group_added = True
             
         # 대기열이 이미 존재하는 경우
         else:
             print("6")
-            temp = await sync_to_async(lambda: list(targetQueueList[0].groups.all()))()
-            print(temp)
+
+            # 대기열 리스트 순회
+            for queue in targetQueueList:
+                print(f"Queue: {queue.name}")
+
+                current_usernum_in_queue = 0
+                
+                # queue에 연결된 모든 groups 가져오기
+                groups = await sync_to_async(list)(queue.groups.all())
+                
+                for grp in groups:
+                    print(f"  Group: {grp.name}")
+                    # group에 연결된 모든 users 가져오기
+                    users = await sync_to_async(list)(grp.users.all())
+                    print(f"    Users: {[user.username for user in users]}")
+
+                    current_usernum_in_queue += len(users)
+                    print(f"    Users count: {current_usernum_in_queue}")
+                    
+                # 현재 대기열에 들어갈 공간이 있다.
+                if current_usernum_in_queue + usernum_in_group <= MAX_Q_SIZE:
+                    await sync_to_async(queue.groups.add)(group)
+                    group_added = True
+                    print(f"    Group added to queue: {group.name}")
+                    # 큐에 추가 후 채팅방으로 빼주는 로직
+                    break
+                # 없다.
+                else:
+                    print(f"    Group not added to queue: {group.name}")
+                    continue
+            
+            if not group_added:
+                # 모든 대기열을 확인했는데도 대기열에 들어갈 공간이 없다.
+                newQueue = await sync_to_async(MatchingQueue.objects.create)(
+                    name = f"{group.location}_{uuid.uuid4()}",
+                    location = group.location,
+                    created_at = timezone.now(),
+                )
+                await sync_to_async(newQueue.groups.add)(group)
+                group_added = True    
+                print(f"Queue created: {newQueue}")
+                # 큐에 추가 후 채팅방으로 빼주는 로직
+                
+                    
+                    
             
             
-            # print(f"Group size: {groupNum}")            
+            

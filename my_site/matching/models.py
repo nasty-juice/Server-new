@@ -7,8 +7,21 @@ class MatchingQueue(models.Model):
     name = models.CharField(max_length=100)
     groups = models.ManyToManyField(FriendGroup, related_name='queue',blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    location = models.CharField(max_length=100)
-    
+    location = models.CharField(
+        max_length=100,
+        choices=(
+            ("myeongjin", "명진당"),
+            ("student_center", "학생회관"),
+            ("staff_cafeteria", "교직원식당"),
+            ("welfare", "복지동"), 
+            ("station_to_mju", "기흥 -> 명지대"),
+            ("mju_to_station", "명지대 -> 기흥"),
+            ("none", "None"),
+        ),
+        default="none",
+        blank=True,
+        null=True,
+    )
     def __str__(self):
         return self.name
 
