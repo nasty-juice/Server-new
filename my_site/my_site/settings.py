@@ -13,9 +13,11 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://702e-125-191-254-69.ngrok-free.app"
+NGROK_URL = "https://3995-117-17-163-65.ngrok-free.app"
 NGROK_WEBSOCKET_URL = NGROK_URL.replace("https://", "wss://")
-print(NGROK_WEBSOCKET_URL)
+
+print(f"### {NGROK_URL} ### ")
+print(f"### {NGROK_WEBSOCKET_URL} ###")
 
 BACKEND_ADDRESS = "127.0.0.1"
 FRONTEND_ADDRESS = "192.168.0.37"
@@ -183,8 +185,8 @@ SITE_ID = 1  # 사용하는 사이트의 ID 설정
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # 이메일로 로그인하도록 설정
 LOGIN_REDIRECT_URL = '/'  # 로그인 후 리디렉션할 URL
 
-#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_HOST = 'smtp.naver.com'  # 이메일 호스트 설정
 EMAIL_PORT = 587 # 이메일 포트 설정

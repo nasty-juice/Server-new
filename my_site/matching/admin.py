@@ -5,6 +5,9 @@ from my_app.models import CustomUser
 
 #큐에 있는 유저만 표시하기 위한 클래스
 class MatchingQueueAdmin(admin.ModelAdmin):
+
+    filter_horizontal = ('groups',)
+    
     def formfield_for_manytomany(self, db_field, request, **kwargs):
         if db_field.name == "users":  # manytomany field의 이름
             if request.resolver_match.kwargs.get('object_id'):

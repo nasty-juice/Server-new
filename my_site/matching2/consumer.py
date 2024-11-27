@@ -1,17 +1,22 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-import json
-from matching.models import MatchingQueue
-from asgiref.sync import sync_to_async
-from .models import InvitationRequest
-from django.utils import timezone
-from my_app.models import CustomUser
 from redis import asyncio as aioredis
-import asyncio
+from asgiref.sync import sync_to_async
+
+from django.utils import timezone
 from django.conf import settings
+
+from matching.models import MatchingQueue
+from my_app.models import CustomUser
+from .models import InvitationRequest, FriendGroup
+
+import json
+import asyncio
 import logging
+import uuid
 
 logger = logging.getLogger(__name__)
+MAX_Q_SIZE = 3
 
 class Matching(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -22,6 +27,8 @@ class Matching(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.user = self.scope["user"]
+
+        #  익명 사용자인 경우 연결 거부
         if self.user.is_anonymous:
             return
         
@@ -29,12 +36,16 @@ class Matching(AsyncWebsocketConsumer):
         self.user.channel_name = self.channel_name
         await sync_to_async(self.user.save)()
 
+        # 유저의 고유 채널 이름 생성
         self.unique_channel_name = f"user_{self.user.student_number}"
-        print(self.unique_channel_name)
+        # print(self.unique_channel_name)
         await self.channel_layer.group_add(
             self.unique_channel_name,
             self.channel_name
         )
+        
+        # 페이지 이름 가져오기
+        self.current_page = None            
         
         await self.accept()
         
@@ -42,18 +53,22 @@ class Matching(AsyncWebsocketConsumer):
         try:
             text_data_json = json.loads(text_data)
             action = text_data_json.get("action")
+            print(action)
             if not action:
                 await self.send_error("Invalid action", 400)
                 return
-
+            
             match action:
-                case "get_meal_status":
-                    meal_data = await self.get_meal_waiting_status()
-                    await self.send_response("meal_status", meal_data)
-                
-                case "get_taxi_status":
-                    taxi_data = await self.get_taxi_waiting_status()
-                    await self.send_response("taxi_status", taxi_data)
+                case "join_meal_page":
+                    self.current_page = "meal_page"
+                    # print("Joined meal page")
+                    # asyncio.create_task(self.broadcast_meal_status())
+                    await self.send_response("join_meal_page", {})
+
+                case "join_taxi_page":
+                    self.current_page = "taxi_page"
+                    # asyncio.create_task(self.broadcast_taxi_status())
+                    await self.send_response("join_taxi_page", {})
                 
                 case "invite_friend":
                     friend_id = text_data_json.get("friend_id")
@@ -70,10 +85,32 @@ class Matching(AsyncWebsocketConsumer):
                     invitation_id = text_data_json.get("invitation_id")
                     await self.reject_invitation(invitation_id)
                 
+                case "start_matching":
+                    location = text_data_json.get("location")
+                    await self.start_matching(location)
+                    await self.send_response("start_matching", {})
+                case "disconnect":
+                    await self.disconnect(1000)
                 case _:
                     await self.send_error("Invalid action", 400)
         except Exception as e:
             await self.send_error(f"Unhandled error: {str(e)}", 500)
+    
+    async def broadcast_meal_status(self):
+        pass
+        """학식 대기 상태를 주기적으로 클라이언트에 전송"""
+        # while self.current_page == "meal_page":
+        #     meal_data = await self.get_meal_waiting_status()
+        #     await self.send_response("meal_status", meal_data)
+        #     await asyncio.sleep(5)  # 5초 간격으로 전송
+
+    async def broadcast_taxi_status(self):
+        pass
+        # """택시 대기 상태를 주기적으로 클라이언트에 전송"""
+        # while self.current_page == "taxi_page":
+        #     taxi_data = await self.get_taxi_waiting_status()
+        #     await self.send_response("taxi_status", taxi_data)
+        #     await asyncio.sleep(5)
     
     async def disconnect(self, close_code):
         try:
@@ -84,9 +121,8 @@ class Matching(AsyncWebsocketConsumer):
 
             # 초대 상태 확인 및 처리
             try:
-                # 초대 데이터 가져오기
-                print(self.user.student_number)
                 
+                # 사용자한테 초대장이 있으면 초대장 상태 cancelled 변경 후 초대장 삭제                
                 @sync_to_async
                 def get_user_invitations(user):
                     # sender_invites와 receiver_invites를 통해 초대 데이터 가져오기
@@ -98,31 +134,62 @@ class Matching(AsyncWebsocketConsumer):
                 invitations = await get_user_invitations(self.user)
                 print(f"Found {len(invitations)} invitations for user {self.user.student_number}")
 
-                for invitation in invitations:
-                    # 초대 상태를 'cancelled'로 변경
-                    await self.update_invitation_status(invitation, "cancelled")
-                    print(f"Invitation ID {invitation.id} status updated to: cancelled")
-                    # 송신자와 수신자에게 초대 취소 알림 전송
-                    await self.notify_invitation_cancelled(invitation)
-                    print(f"Sent cancellation notification for invitation ID {invitation.id}")
-                    # 초대 삭제
-                    await sync_to_async(invitation.delete)()
-                    print(f"Invitation ID {invitation.id} deleted")
+                if invitations:
+                    for invitation in invitations:
+                        # 초대 상태를 'cancelled'로 변경
+                        await self.update_invitation_status(invitation, "cancelled")
+                        print(f"Invitation ID {invitation.id} status updated to: cancelled")
+                        # 송신자와 수신자에게 초대 취소 알림 전송
+                        await self.notify_invitation_cancelled(invitation)
+                        print(f"Sent cancellation notification for invitation ID {invitation.id}")
+                        # 초대 삭제
+                        await sync_to_async(invitation.delete)()
+                        print(f"Invitation deleted")
 
-                print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
+                    print(f"All invitations for user {self.user.student_number} have been cancelled and deleted.")
             except Exception as e:
                 print(f"Error handling invitations during disconnect: {e}")
 
+            # working on when friend disconnects from the group
+            try:
+                # 사용자가 속한 모든 그룹 가져오기
+                friend_groups = await sync_to_async(list)(FriendGroup.objects.filter(users=self.user))
+                print(f"Found {len(friend_groups)} friend groups")
+                
+                # 그룹 내 사용자 제거 및 그룹 삭제 처리
+                for friend_group in friend_groups:
+                    # 그룹 내에 사용자가 포함된 경우 확인
+                    user_in_group = await sync_to_async(friend_group.users.filter(id=self.user.id).exists)()
+                    if user_in_group:
+                        print(f"User {self.user.student_number} is in friend group: {friend_group.name}")
+                        self.channel_layer.group_send(
+                            friend_group.friend_group_channel,
+                            {
+                                "type": "user_disconnected",
+                                "data": {
+                                    "disconnected_user": self.user.student_number,
+                                    "message": "User has disconnected.",
+                                },
+                            },
+                        )
+                        await sync_to_async(friend_group.delete)()
+                    else:
+                        print(f"User {self.user.student_number} is not in friend group: {friend_group.name}")
+            except Exception as e:
+                # 예외 처리
+                print(f"Error handling friend group during disconnect: {e}")
+                        
+            
             # Redis 키 삭제 및 연결 종료
-            if hasattr(self, "redis"):
-                try:
-                    await self.redis.delete(self.unique_channel_name)
-                    print(f"Redis key deleted for: {self.unique_channel_name}")
-                except Exception as redis_error:
-                    print(f"Error deleting Redis key: {redis_error}")
-                finally:
-                    await self.redis.aclose()
-                    print("Redis connection closed.")
+            try:
+                await self.redis.delete(self.unique_channel_name)
+                print(f"Redis key deleted for: {self.unique_channel_name}")
+            except Exception as redis_error:
+                print(f"Error deleting Redis key: {redis_error}")
+            finally:
+                await self.redis.aclose()
+                print("Redis connection closed.")
+
         except Exception as e:
             print(f"Error during disconnect: {e}")
 
@@ -130,7 +197,7 @@ class Matching(AsyncWebsocketConsumer):
         """초대 상태를 업데이트."""
         invitation.status = status
         await sync_to_async(invitation.save)()
-        print(f"Invitation ID {invitation.id} status updated to: {status}")
+        # print(f"Invitation ID {invitation.id} status updated to: {status}")
 
     async def notify_invitation_cancelled(self, invitation):
         """송신자와 수신자에게 초대 취소 알림 전송."""
@@ -147,13 +214,14 @@ class Matching(AsyncWebsocketConsumer):
                         "invitation_id": invitation.id,
                         "sender_id": sender.student_number,
                         "receiver_id": receiver.student_number,
+                        "message": "Invitation has been cancelled. Friend disconnected.",
                     },
                 },
             )
         else:
             print(f"No group_name for invitation ID {invitation.id}")
 
-        print(f"Cancellation notification sent for invitation ID {invitation.id}")
+        # print(f"Cancellation notification sent for invitation ID {invitation.id}")
 
     async def invitation_cancelled(self, event):
         """초대 취소 이벤트 처리."""
@@ -163,6 +231,15 @@ class Matching(AsyncWebsocketConsumer):
             "data": data
         }))
         print(f"Sent cancellation notification for invitation ID {data['invitation_id']}")
+
+    async def user_disconnected(self, event):
+        """사용자 연결 해제 이벤트 처리."""
+        data = event["data"]
+        await self.send(text_data=json.dumps({
+            "type": "user_disconnected",
+            "data": data
+        }))
+        print(f"Sent user disconnected notification for user {data['disconnected_user']}")
 
     async def get_meal_waiting_status(self):
         RESTAURANT_LIST = ['student_center', 'myeongjin', 'staff_cafeteria', 'welfare']
@@ -197,8 +274,8 @@ class Matching(AsyncWebsocketConsumer):
                 await self.send_error("Friend is not connected", 404)
                 return
             
-            # 초대 상태 확인
-            await self.check_existing_invitations(self.user, friend)
+             # 초대 상태 확인
+            await self.check_both_existing_invitations(self.user, friend)
 
             # 초대 생성
             invitation = await self.create_invitation(self.user, friend)
@@ -253,7 +330,19 @@ class Matching(AsyncWebsocketConsumer):
         await sync_to_async(user.save)()
         return invitation
 
-    async def check_existing_invitations(self, user, friend):
+    async def check_existing_invitations(self, user):
+        """Check for existing invitations."""
+        print("HI")
+        if await sync_to_async(self.user.sent_invites.exists)():
+            print("You have invitation.")
+            return True
+        
+        if await sync_to_async(self.user.received_invites.exists)():
+            print("You have invitation.")
+            return True
+        return False
+
+    async def check_both_existing_invitations(self, user, friend):
         """Check for existing invitations for both sender and receiver."""
         sender_to_receiver = await sync_to_async(InvitationRequest.objects.filter)(receiver=friend, sender=user)
         receiver_to_sender = await sync_to_async(InvitationRequest.objects.filter)(receiver=user, sender=friend)
@@ -349,8 +438,18 @@ class Matching(AsyncWebsocketConsumer):
                     "type": "invitation_accepted",
                     "data": {
                         "invitation_id": invitation.id,
-                        "sender_id": invitation.sender.student_number,
-                        "receiver_id": invitation.receiver.student_number,
+                        "sender": {
+                            "id": invitation.sender.student_number,
+                            "name": invitation.sender.username,
+                            "department": invitation.sender.department,
+                            "temperature": str(invitation.sender.temperature),
+                        },
+                        "receiver": {
+                            "id": invitation.receiver.student_number,
+                            "name": invitation.receiver.username,
+                            "department": invitation.receiver.department,
+                            "temperature": str(invitation.receiver.temperature),
+                        },    
                         "group_name": group_name,
                     },
                 },
@@ -457,3 +556,110 @@ class Matching(AsyncWebsocketConsumer):
                 },
             },
         )
+
+    async def start_matching(self, loc):
+        # 초대장이 있는지 확인
+        # 초대장 있으면 duo_match
+        if await self.check_existing_invitations(self.user):
+            await self.send_response("duo_match", {})
+            print("Duo match start") 
+            duo_group = await sync_to_async(FriendGroup.objects.create)(
+                # name = f"duo_{duo_group_name}",
+                status = "duo",
+                location = loc,
+                created_at = timezone.now(),
+            )
+            print(f"Duo group created: {duo_group.name}")
+            await sync_to_async(duo_group.delete)()
+            
+        # 초대장이 없으면 solo_match
+        else:
+            await self.send_response("solo_match", {})
+            # 솔로 그룹 생성
+            print("0")
+            solo_group = await sync_to_async(FriendGroup.objects.create)(
+                name = f"solo_{self.user.student_number}",
+                status = "solo",
+                location = loc,
+                created_at = timezone.now(),
+            )
+            print("1")
+            await sync_to_async(solo_group.users.add)(self.user)
+            print("2")
+            await self.get_or_create_queue(solo_group)
+
+    async def get_or_create_queue(self, group):
+        print("3")
+        # location에 해당하는 현재 대기열 targetQueueList 가져오기
+        targetQueueList = await database_sync_to_async(list)(MatchingQueue.objects.filter(location=group.location))
+        print("4")
+        print(targetQueueList)
+        
+        # 현재 매칭 시작하기를 누른 그룹 안의 유저 수 세기
+        usernum_in_group = await sync_to_async(group.users.count)()
+        print(f"User number in group: {usernum_in_group}")
+        
+        group_added = False
+        
+        # 대기열이 존재하지 않는 경우 대기열 생성
+        if not targetQueueList:
+            print("5")
+            newQueue = await sync_to_async(MatchingQueue.objects.create)(
+                name = f"{group.location}_{uuid.uuid4()}",
+                location = group.location,
+                created_at = timezone.now(),
+            )
+            await sync_to_async(newQueue.groups.add)(group)
+            group_added = True
+            
+        # 대기열이 이미 존재하는 경우
+        else:
+            print("6")
+
+            # 대기열 리스트 순회
+            for queue in targetQueueList:
+                print(f"Queue: {queue.name}")
+
+                current_usernum_in_queue = 0
+                
+                # queue에 연결된 모든 groups 가져오기
+                groups = await sync_to_async(list)(queue.groups.all())
+                
+                for grp in groups:
+                    print(f"  Group: {grp.name}")
+                    # group에 연결된 모든 users 가져오기
+                    users = await sync_to_async(list)(grp.users.all())
+                    print(f"    Users: {[user.username for user in users]}")
+
+                    current_usernum_in_queue += len(users)
+                    print(f"    Users count: {current_usernum_in_queue}")
+                    
+                # 현재 대기열에 들어갈 공간이 있다.
+                if current_usernum_in_queue + usernum_in_group <= MAX_Q_SIZE:
+                    await sync_to_async(queue.groups.add)(group)
+                    group_added = True
+                    print(f"    Group added to queue: {group.name}")
+                    # 큐에 추가 후 채팅방으로 빼주는 로직
+                    break
+                # 없다.
+                else:
+                    print(f"    Group not added to queue: {group.name}")
+                    continue
+            
+            if not group_added:
+                # 모든 대기열을 확인했는데도 대기열에 들어갈 공간이 없다.
+                newQueue = await sync_to_async(MatchingQueue.objects.create)(
+                    name = f"{group.location}_{uuid.uuid4()}",
+                    location = group.location,
+                    created_at = timezone.now(),
+                )
+                await sync_to_async(newQueue.groups.add)(group)
+                group_added = True    
+                print(f"Queue created: {newQueue}")
+                # 큐에 추가 후 채팅방으로 빼주는 로직
+                
+                    
+                    
+            
+            
+            

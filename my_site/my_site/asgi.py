@@ -20,7 +20,7 @@ websocket_urlpatterns = [
     re_path(r"ws/matching2/$", Matching.as_asgi()),
 ]
 
-# 배포할때
+
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
     "websocket": TokenAuthMiddleware(
