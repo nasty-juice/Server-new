@@ -16,7 +16,7 @@ import logging
 import uuid
 
 logger = logging.getLogger(__name__)
-MAX_Q_SIZE = 3
+MAX_Q_SIZE = 4
 
 class Matching(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -35,6 +35,8 @@ class Matching(AsyncWebsocketConsumer):
         # CustomUser 모델에 channel_name 저장
         self.user.channel_name = self.channel_name
         await sync_to_async(self.user.save)()
+
+        self.room_group_name = None
 
         # 유저의 고유 채널 이름 생성
         self.unique_channel_name = f"user_{self.user.student_number}"
@@ -587,8 +589,14 @@ class Matching(AsyncWebsocketConsumer):
                 location = loc,
                 created_at = timezone.now(),
             )
+            
+            sender = await sync_to_async(lambda: invitation.sender)()
+            receiver = await sync_to_async(lambda: invitation.receiver)()
+            await sync_to_async(duo_group.users.add)(sender)
+            await sync_to_async(duo_group.users.add)(receiver)
+            await sync_to_async(duo_group.save)()
             print(f"Duo group created: {duo_group.name}")
-            await sync_to_async(duo_group.delete)()
+            await self.get_or_create_queue(duo_group)
             
         # 초대장이 없으면 solo_match
         else:
@@ -629,6 +637,7 @@ class Matching(AsyncWebsocketConsumer):
             )
             await sync_to_async(newQueue.groups.add)(group)
             group_added = True
+            self.room_group_name = newQueue.name
             
         # 대기열이 이미 존재하는 경우
         else:
@@ -656,6 +665,7 @@ class Matching(AsyncWebsocketConsumer):
                 if current_usernum_in_queue + usernum_in_group <= MAX_Q_SIZE:
                     await sync_to_async(queue.groups.add)(group)
                     group_added = True
+                    self.room_group_name = queue.name
                     print(f"    Group added to queue: {group.name}")
                     # 큐에 추가 후 채팅방으로 빼주는 로직
                     break
@@ -672,10 +682,57 @@ class Matching(AsyncWebsocketConsumer):
                     created_at = timezone.now(),
                 )
                 await sync_to_async(newQueue.groups.add)(group)
-                group_added = True    
+                group_added = True
+                self.room_group_name = newQueue.name 
                 print(f"Queue created: {newQueue}")
                 # 큐에 추가 후 채팅방으로 빼주는 로직
+        
+        if group_added:
+            await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+
+        for queue in targetQueueList:
+            print(f"Queue: {queue.name}")
+
+            current_usernum_in_queue = 0
+            
+            # queue에 연결된 모든 groups 가져오기
+            groups = await sync_to_async(list)(queue.groups.all())
+            
+            for grp in groups:
+                print(f"  Group: {grp.name}")
+                # group에 연결된 모든 users 가져오기
+                users = await sync_to_async(list)(grp.users.all())
+                print(f"    Users: {[user.username for user in users]}")
+
+                current_usernum_in_queue += len(users)
+                print(f"    Users count: {current_usernum_in_queue}")
+            
+            print(f"Current queue size: {current_usernum_in_queue}")
+            
+            if current_usernum_in_queue == MAX_Q_SIZE:
+                print("Queue is full")
+                await self.ask_member_to_join_room()
+                break
                 
+    async def ask_member_to_join_room(self):
+        # queue에 연결된 모든 groups 가져오기
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "ask_join_room",
+                "message": "The queue is full. Would you like to join the room?",
+                "status": "matched",
+            }
+        )
+        
+
+            
+    async def ask_join_room(self, event):
+        print("Asking user to join room")
+        message = event["message"]
+        await self.send_response("ask_join_room", {"message": message})
+
+    
                     
                     
             
