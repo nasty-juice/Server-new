@@ -30,6 +30,7 @@ class Timer():
     
     async def send_timer(self):
         for currTime in range(15, 0, -1):
+            print("YOU")
             await self.consumer.channel_layer.group_send(
                 self.consumer.room_group_name,
                 {
@@ -50,16 +51,7 @@ class Timer():
             },
         )
 
-    asyncio.create_task(send_timer())
     
-    async def send_to_group(self, event):
-        response = {
-            "status": event['status'],
-            "message": event['message'],
-        }
-        try:
-            await self.send(text_data=json.dumps(response))
-        except Exception as e:
-            print(f"타이머 메시지 전송 중 오류 발생: {e}")
-            return
+    
+    
         

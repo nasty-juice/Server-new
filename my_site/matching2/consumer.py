@@ -734,7 +734,17 @@ class Matching(AsyncWebsocketConsumer):
         message = event["message"]
         await self.send_response("ask_join_room", {"message": message})
         
-    
+    async def send_to_group(self, event):
+        print("FUCK")
+        response = {
+            "status": event['status'],
+            "message": event['message'],
+        }
+        try:
+            await self.send(text_data=json.dumps(response))
+        except Exception as e:
+            print(f"타이머 메시지 전송 중 오류 발생: {e}")
+            return
     
 
     
