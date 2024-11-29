@@ -1,10 +1,5 @@
 from asgiref.sync import sync_to_async
-from matching.models import MatchingQueue, MatchRequest
-from my_app.models import CustomUser
-from .models import InvitationRequest, FriendGroup
-
 import asyncio
-import json
 
 @sync_to_async
 def get_user_in_queue(targetQueue):
@@ -25,12 +20,12 @@ def get_user_in_queue(targetQueue):
 
 # 타이머 설정
 class Timer():
-    def __init__(self, consumer):
+    def __init__(self, consumer, queue):
         self.consumer = consumer
+        self.queue = queue
     
     async def send_timer(self):
         for currTime in range(15, 0, -1):
-            print("YOU")
             await self.consumer.channel_layer.group_send(
                 self.consumer.room_group_name,
                 {
@@ -50,6 +45,16 @@ class Timer():
                 "status": "matchTimer",    
             },
         )
+        
+        #await sync_to_async(self.timeOut)()
+        
+    def timeOut(self):
+        friendgroups = self.queue.groups.all()
+        
+        for group in friendgroups:
+            group.delete()
+            
+        self.queue.delete()
 
     
     

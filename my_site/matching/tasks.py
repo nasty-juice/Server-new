@@ -1,6 +1,5 @@
 from celery import shared_task
 from chat.temperature import apply_temperature_changes
-from asgiref.sync import async_to_sync
 
 @shared_task
 def delete_chat_room(chatroom_name):

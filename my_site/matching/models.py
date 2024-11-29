@@ -7,6 +7,7 @@ class MatchingQueue(models.Model):
     name = models.CharField(max_length=100)
     groups = models.ManyToManyField(FriendGroup, related_name='queue',blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_users = models.ManyToManyField(CustomUser, related_name='confirmed_queue',blank=True)
     location = models.CharField(
         max_length=100,
         choices=(

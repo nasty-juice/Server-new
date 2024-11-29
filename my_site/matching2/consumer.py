@@ -9,7 +9,9 @@ from django.conf import settings
 from matching.models import MatchingQueue
 from my_app.models import CustomUser
 from .models import InvitationRequest, FriendGroup
+from chat.models import ChatRoom
 from .utils import get_user_in_queue, Timer
+from .match import match
 
 import json
 import asyncio
@@ -17,7 +19,6 @@ import logging
 import uuid
 
 logger = logging.getLogger(__name__)
-MAX_Q_SIZE = 4
 
 class Matching(AsyncWebsocketConsumer):
     def __init__(self, *args, **kwargs):
@@ -37,7 +38,7 @@ class Matching(AsyncWebsocketConsumer):
         self.user.channel_name = self.channel_name
         await sync_to_async(self.user.save)()
 
-        self.room_group_name = None
+        # self.room_group_name = None
 
         # 유저의 고유 채널 이름 생성
         self.unique_channel_name = f"user_{self.user.student_number}"
@@ -94,6 +95,13 @@ class Matching(AsyncWebsocketConsumer):
                     await self.send_response("start_matching", {})
                 case "disconnect":
                     await self.disconnect(1000)
+                case "accept_match":
+                    await match(self).accept_match()
+                case "reject_match":
+                    await match(self).reject_match()
+                case "confirm_start":
+                    await match(self).connect_new_group(text_data_json.get("new_group_name"))
+                    
                 case _:
                     await self.send_error("Invalid action", 400)
         except Exception as e:
@@ -577,7 +585,13 @@ class Matching(AsyncWebsocketConsumer):
     async def start_matching(self, loc):
         # 초대장이 있는지 확인
         # 초대장 있으면 duo_match
+        
         if await self.check_existing_invitations(self.user):
+            #만약에 초대장 받은 사람이면 return
+            #재훈
+            # if await sync_to_async(self.user.invitation.receiver)() == self.user:
+            #     return
+            
             await self.send_response("duo_match", {})
             print("Duo match start") 
 
@@ -663,7 +677,7 @@ class Matching(AsyncWebsocketConsumer):
                     print(f"    Users count: {current_usernum_in_queue}")
                     
                 # 현재 대기열에 들어갈 공간이 있다.
-                if current_usernum_in_queue + usernum_in_group <= MAX_Q_SIZE:
+                if current_usernum_in_queue + usernum_in_group <= settings.MAX_Q_SIZE:
                     await sync_to_async(queue.groups.add)(group)
                     group_added = True
                     self.room_group_name = queue.name
@@ -689,8 +703,34 @@ class Matching(AsyncWebsocketConsumer):
                 # 큐에 추가 후 채팅방으로 빼주는 로직
         
         if group_added:
+            if group.status == "duo":
+                invitation = await self.get_invitation()
+                print(f"invitation : {invitation}")
+                receiver = await sync_to_async(lambda: invitation.receiver)()
+                print(f"receiver : {receiver.username}")
+                #수신자 그룹 추가
+                #B한테 self.room_group_name 최신화
+                group_name = await sync_to_async(lambda: invitation.friend_group_channel)()
+                print(f"group_name : {group_name}")
+                
+                await self.channel_layer.group_send(
+                    group_name,
+                    {
+                        "type": "send_to_group",
+                        "message": self.room_group_name,
+                        "status": "start_matching"
+                    }
+                )
+                
+                await self.add_user_to_group(receiver, self.room_group_name)
+
+                
+            
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
 
+
+        targetQueueList = await database_sync_to_async(list)(MatchingQueue.objects.filter(location=group.location))
+        
         for queue in targetQueueList:
             print(f"Queue: {queue.name}")
 
@@ -710,14 +750,15 @@ class Matching(AsyncWebsocketConsumer):
             
             print(f"Current queue size: {current_usernum_in_queue}")
             
-            if current_usernum_in_queue == MAX_Q_SIZE:
-                print("Queue is full")
+            print(f"MAX_Q_SIZE : {settings.MAX_Q_SIZE}")
+            
+            if current_usernum_in_queue == settings.MAX_Q_SIZE:
                 await self.ask_member_to_join_room(queue)
                 break
                 
     async def ask_member_to_join_room(self,targetQuque):
         userData = await get_user_in_queue(targetQuque)
-        # queue에 연결된 모든 groups 가져오기
+        # queue 채널 그룹에 연결된 모든 유저한테 메시지 전송
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -727,15 +768,13 @@ class Matching(AsyncWebsocketConsumer):
             }
         )
         
-        asyncio.create_task(Timer(self).send_timer())
+        asyncio.create_task(Timer(self,targetQuque).send_timer())
         
     async def ask_join_room(self, event):
-        print("Asking user to join room")
         message = event["message"]
         await self.send_response("ask_join_room", {"message": message})
-        
+     
     async def send_to_group(self, event):
-        print("FUCK")
         response = {
             "status": event['status'],
             "message": event['message'],

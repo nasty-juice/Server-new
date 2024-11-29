@@ -12,7 +12,7 @@ from .utils import check_all_user_in_chatroom, get_db_chatroom_messages, encrypt
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
-        self.room_group_name = f"chat_{self.room_name}"
+        self.room_group_name = self.room_name
         self.user = self.scope["user"]
         print(f'room_name : {self.room_name}')
         print(f'user : {self.user}')
@@ -111,15 +111,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
             print(f"메시지 전송 실패: {e}")
     
     #시스템 메시지
-    async def send_to_group(self, event):
-        status = event['status']
-        message = event['message']
-        encrypted_message = await sync_to_async(encrypt_message)(message)
-        await self.save_message(encrypted_message, True)
-        # WebSocket에 메시지 전송
+    async def system_send(self, event):
         await self.send(text_data=json.dumps({
-            "action": status,
-            "message": message
+            "action": "SYSTEM",
+            "message": event['message'],
+            'timestamp' : event['timestamp']
         }))
         
     #db에 메시지 저장
