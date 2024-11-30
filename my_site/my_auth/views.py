@@ -177,16 +177,16 @@ class CustomSignupView(SignupView):
             
             # Save the student card image to the user model with a new filename
             new_filename = f"{user.student_number}_student_card.jpg"
-            print(f"New filename: {new_filename}")
+            # print(f"New filename: {new_filename}")
 
             user.student_card_image.save(new_filename, ContentFile(student_card_image.read()), save=False)
 
             clean_dict = perform_ocr(student_card_image)  # 변환된 이미지를 OCR 함수로 전달
-            print(f"OCR result: {clean_dict}")
+            # print(f"OCR result: {clean_dict}")
             
             unknown_fields = get_unknown_fields(clean_dict)
             if unknown_fields:
-                print(f"Unknown fields found: {unknown_fields}")
+                # print(f"Unknown fields found: {unknown_fields}")
                 form.add_error(None, f"학생증 인식에 실패한 항목: {', '.join(unknown_fields)}")
                 return self.form_invalid(form)
             
@@ -213,6 +213,25 @@ class CustomSignupView(SignupView):
         response.status_code = 400
         return response
 
+class CheckChatRoom(APIView):
+    
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = self.user
+        if user.join_room:
+            return Response({"status": "joined"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"status": "not joined"}, status=status.HTTP_400_BAD_REQUEST)
 
-
-
+class CanMatch(APIView):
+    
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = self.user
+        
+        if user.join_room:
+            return Response({"status": "cannot-match"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"status": "can-match"}, status=status.HTTP_200_OK)

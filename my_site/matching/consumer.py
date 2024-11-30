@@ -64,7 +64,6 @@ class StartMatching(AsyncWebsocketConsumer):
                 self.confirmed = True
                 return
             
-    
     async def start_match(self):
         #장소 데이터 불러오기 //학관, 명진당
         targetQueue = await get_or_create_queue(self.location)

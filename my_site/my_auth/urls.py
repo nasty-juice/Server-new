@@ -19,6 +19,8 @@ urlpatterns = [
     path('api/user/me/password-change/', views.UserPasswordChangeView.as_view(), name='user_password_change'), # 비밀번호 변경 엔드포인트 /my_auth/user/me/password-change/
     path('api/user/me/delete/', views.UserDeleteView.as_view(), name='user_delete'), # 회원탈퇴 엔드포인트 /my_auth/user/me/delete/
 
+    path('api/check-chat-room/', views.CheckChatRoom.as_view(), name='check_join_room'), # 사용자의 join_room 필드를 확인하는 엔드포인트 /my_auth/api/check-join-room/
+    path('api/can-match/', views.CanMatch.as_view(), name='can_match'), # 사용자의 join_room 필드를 확인하는 엔드포인트 /my_auth/api/check-join-room/
 
     path('temp/', views.temp_view, name='temp_view'),
     path('temp/class/', views.TempClassView.as_view(), name='temp_class_view'),

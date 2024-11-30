@@ -66,7 +66,7 @@ class Matching(AsyncWebsocketConsumer):
                 case "join_meal_page":
                     self.current_page = "meal_page"
                     # print("Joined meal page")
-                    # asyncio.create_task(self.broadcast_meal_status())
+                    asyncio.create_task(self.broadcast_meal_status())
                     await self.send_response("join_meal_page", {})
 
                 case "join_taxi_page":
@@ -99,6 +99,9 @@ class Matching(AsyncWebsocketConsumer):
                     await match(self).accept_match()
                 case "reject_match":
                     await match(self).reject_match()
+                # 매칭 대기화면에서 취소한 경우
+                case "cancel_matching":
+                    await match(self).cancel_matching()
                 case "confirm_start":
                     await match(self).connect_new_group(text_data_json.get("new_group_name"))
                     
@@ -108,12 +111,12 @@ class Matching(AsyncWebsocketConsumer):
             await self.send_error(f"Unhandled error: {str(e)}", 500)
     
     async def broadcast_meal_status(self):
-        pass
+        # pass
         """학식 대기 상태를 주기적으로 클라이언트에 전송"""
-        # while self.current_page == "meal_page":
-        #     meal_data = await self.get_meal_waiting_status()
-        #     await self.send_response("meal_status", meal_data)
-        #     await asyncio.sleep(5)  # 5초 간격으로 전송
+        while self.current_page == "meal_page":
+            meal_data = await self.get_meal_waiting_status()
+            await self.send_response("meal_status", meal_data)
+            await asyncio.sleep(5)  # 5초 간격으로 전송
 
     async def broadcast_taxi_status(self):
         pass
@@ -255,11 +258,17 @@ class Matching(AsyncWebsocketConsumer):
     async def get_meal_waiting_status(self):
         RESTAURANT_LIST = ['student_center', 'myeongjin', 'staff_cafeteria', 'welfare']
         meal_queues = await database_sync_to_async(list)(
-            MatchingQueue.objects.filter(name__in=RESTAURANT_LIST)
+            MatchingQueue.objects.all()
         )
+
         response_data = {name: 0 for name in RESTAURANT_LIST}
         for queue in meal_queues:
-            response_data[queue.name] = await database_sync_to_async(queue.users.count)()
+            groups = await sync_to_async(list)(queue.groups.all())
+            print(f"Queue {queue.name} has {len(groups)} groups")
+            for group in groups:
+                user_count = await sync_to_async(list)(group.users.all())
+                print(f"len: {len(user_count)}")
+                # response_data[queue.location] += user_count
         return response_data
 
     async def get_taxi_waiting_status(self):
@@ -326,6 +335,10 @@ class Matching(AsyncWebsocketConsumer):
             {
                 "type": "send_invitation",
                 "invitation_id": invitation.id,
+                "sender": {
+                    "name": self.user.username,
+                    "id": self.user.student_number,
+                }
             }
         )
 
@@ -411,10 +424,13 @@ class Matching(AsyncWebsocketConsumer):
 
     async def send_invitation(self, event):
         invitation_id = event["invitation_id"]
+        sender = event["sender"]
         await self.send(text_data=json.dumps({
             "type": "invitation",
             "data": {
                 "invitation_id": invitation_id,
+                "name": sender["name"],
+                "number": sender["id"],
             }
         }))
 
@@ -596,6 +612,14 @@ class Matching(AsyncWebsocketConsumer):
             print("Duo match start") 
 
             invitation = await self.get_invitation()
+
+            if invitation.receiver == self.user:
+                print("YOU ARE RECEIVER. CANNOT START MATCHING")
+                await self.send_error("You are receiver. Cannot start matching", 400)
+                return
+            
+                            
+            
             print(invitation.friend_group_channel)
             
             duo_group = await sync_to_async(FriendGroup.objects.create)(
@@ -603,6 +627,7 @@ class Matching(AsyncWebsocketConsumer):
                 status = "duo",
                 location = loc,
                 created_at = timezone.now(),
+                friend_group_channel = invitation.friend_group_channel,
             )
             
             sender = await sync_to_async(lambda: invitation.sender)()
@@ -772,7 +797,11 @@ class Matching(AsyncWebsocketConsumer):
         
     async def ask_join_room(self, event):
         message = event["message"]
-        await self.send_response("ask_join_room", {"message": message})
+        # await self.send_response("ask_join_room", {"message": message})
+        await self.send(text_data=json.dumps({
+            "type": "ask_join_room",
+            "message": message,
+        }))
      
     async def send_to_group(self, event):
         response = {

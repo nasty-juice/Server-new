@@ -35,7 +35,7 @@ class CustomSignupSerializer(serializers.ModelSerializer):
                     
                 ## OCR 처리
                     clean_dict = perform_ocr(student_card_image)
-                    print("clean dict: ", clean_dict)
+                    # print("clean dict: ", clean_dict)
 
                     unknown_fields = get_unknown_fields(clean_dict)
                     if unknown_fields:
