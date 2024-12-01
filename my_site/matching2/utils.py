@@ -27,7 +27,7 @@ class Timer():
         self.queue = queue
     
     async def send_timer(self):
-        for currTime in range(15, 0, -1):
+        for currTime in range(30, 0, -1):
             await self.consumer.channel_layer.group_send(
                 self.consumer.room_group_name,
                 {

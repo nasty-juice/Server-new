@@ -57,7 +57,7 @@ class Matching(AsyncWebsocketConsumer):
         try:
             text_data_json = json.loads(text_data)
             action = text_data_json.get("action")
-            print(action)
+            print(f"{self.user.student_number}--------------{action}----------------")
             if not action:
                 await self.send_error("Invalid action", 400)
                 return
@@ -104,6 +104,7 @@ class Matching(AsyncWebsocketConsumer):
                     await match(self).cancel_matching()
                 case "confirm_start":
                     await match(self).connect_new_group(text_data_json.get("new_group_name"))
+                    print(f"{self.user.student_number} -> {text_data_json.get('new_group_name')}")
                     
                 case _:
                     await self.send_error("Invalid action", 400)
