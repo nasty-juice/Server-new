@@ -28,7 +28,5 @@ class ChatMessage(models.Model):
 def create_initial_chat_message(sender, instance, created, **kwargs):
     if created:
         chat_open_message(instance)
-        delete_chat_room.apply_async((instance.id,), countdown=3600)
-        chat_send_time_message.apply_async((instance.id, "10초 지났습니다."), countdown=10)
-        chat_send_time_message.apply_async((instance.id, "20초 지났습니다."), countdown=20)
-        chat_send_time_message.apply_async((instance.id, "30초 지났습니다."), countdown=30)
+        delete_chat_room.apply_async((instance.id,), countdown=180)
+        chat_send_time_message.apply_async((instance.id, "채팅방 종료까지 10분 남았습니다. 매너온도 평가 부탁드립니다."), countdown=150)

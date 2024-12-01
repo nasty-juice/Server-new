@@ -218,18 +218,18 @@ class CheckChatRoom(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        user = self.user
+        user = request.user
         if user.join_room:
             return Response({"status": "joined"}, status=status.HTTP_200_OK)
         else:
-            return Response({"status": "not joined"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"status": "not joined"}, status=status.HTTP_404_NOT_FOUND)
 
 class CanMatch(APIView):
     
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        user = self.user
+        user = request.user
         
         if user.join_room:
             return Response({"status": "cannot-match"}, status=status.HTTP_400_BAD_REQUEST)

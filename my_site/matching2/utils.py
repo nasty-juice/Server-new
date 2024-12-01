@@ -1,5 +1,7 @@
 from asgiref.sync import sync_to_async
 import asyncio
+from matching2.match import match
+
 
 @sync_to_async
 def get_user_in_queue(targetQueue):
@@ -46,7 +48,7 @@ class Timer():
             },
         )
         
-        #await sync_to_async(self.timeOut)()
+        await sync_to_async(self.timeOut)()
         
     def timeOut(self):
         friendgroups = self.queue.groups.all()
@@ -55,7 +57,8 @@ class Timer():
             group.delete()
             
         self.queue.delete()
-
+        print("timeout")
+        # await match.cancel_matching(self.consumer)
     
     
     

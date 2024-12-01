@@ -13,7 +13,7 @@ from decouple import config
 from pathlib import Path
 import os
 
-NGROK_URL = "https://ef15-125-191-254-69.ngrok-free.app"
+NGROK_URL = "https://1631-125-191-254-69.ngrok-free.app"
 NGROK_WEBSOCKET_URL = NGROK_URL.replace("https://", "wss://")
 
 print(f"### {NGROK_URL} ### ")
@@ -25,7 +25,7 @@ FRONTEND_ADDRESS = "192.168.0.37"
 BACKEND_URL = "http://" + BACKEND_ADDRESS + ":8000"
 FRONTEND_URL = "http://" + FRONTEND_ADDRESS + ":190000"
 
-MAX_Q_SIZE = 2
+MAX_Q_SIZE = 4
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

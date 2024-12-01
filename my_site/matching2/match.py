@@ -91,9 +91,9 @@ class match:
     async def cancel_matching(self):
         targetQueue = await sync_to_async(MatchingQueue.objects.get)(name=self.consumer.room_group_name)
         targetFriendGroup = await sync_to_async(lambda: targetQueue.groups.get(users=self.consumer.user))()
-        print(targetQueue)
-        print(targetFriendGroup)
-        print(targetFriendGroup.friend_group_channel)
+        # print(targetQueue)
+        # print(targetFriendGroup)
+        # print(targetFriendGroup.friend_group_channel)
         
         await sync_to_async(targetQueue.groups.remove)(targetFriendGroup)
         
@@ -109,8 +109,25 @@ class match:
                     "status": "cancel"
                 }
             )
-
+        
         await sync_to_async(targetFriendGroup.delete)()
+        user_num = 0
+        groups = await sync_to_async(list)(targetQueue.groups.all())
+        for group in groups:
+            # num = await sync_to_async(len(group.users.all()))()
+            temp = await sync_to_async(list)(group.users.all())
+            num = len(temp)
+            user_num += num
+        
+        await self.consumer.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "send_to_group",
+                "message": user_num,
+                "status": "update_user_num"
+            }
+        )
+
         
         groups = await sync_to_async(lambda: list(targetQueue.groups.all()))()
         if len(groups) == 0:

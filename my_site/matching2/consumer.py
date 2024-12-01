@@ -71,7 +71,7 @@ class Matching(AsyncWebsocketConsumer):
 
                 case "join_taxi_page":
                     self.current_page = "taxi_page"
-                    # asyncio.create_task(self.broadcast_taxi_status())
+                    asyncio.create_task(self.broadcast_taxi_status())
                     await self.send_response("join_taxi_page", {})
                 
                 case "invite_friend":
@@ -111,7 +111,6 @@ class Matching(AsyncWebsocketConsumer):
             await self.send_error(f"Unhandled error: {str(e)}", 500)
     
     async def broadcast_meal_status(self):
-        # pass
         """학식 대기 상태를 주기적으로 클라이언트에 전송"""
         while self.current_page == "meal_page":
             meal_data = await self.get_meal_waiting_status()
@@ -119,12 +118,11 @@ class Matching(AsyncWebsocketConsumer):
             await asyncio.sleep(5)  # 5초 간격으로 전송
 
     async def broadcast_taxi_status(self):
-        pass
         # """택시 대기 상태를 주기적으로 클라이언트에 전송"""
-        # while self.current_page == "taxi_page":
-        #     taxi_data = await self.get_taxi_waiting_status()
-        #     await self.send_response("taxi_status", taxi_data)
-        #     await asyncio.sleep(5)
+        while self.current_page == "taxi_page":
+            taxi_data = await self.get_taxi_waiting_status()
+            await self.send_response("taxi_status", taxi_data)
+            await asyncio.sleep(5)
     
     async def disconnect(self, close_code):
         try:
@@ -258,27 +256,51 @@ class Matching(AsyncWebsocketConsumer):
     async def get_meal_waiting_status(self):
         RESTAURANT_LIST = ['student_center', 'myeongjin', 'staff_cafeteria', 'welfare']
         meal_queues = await database_sync_to_async(list)(
-            MatchingQueue.objects.all()
+            MatchingQueue.objects.filter(location__in=RESTAURANT_LIST)
         )
 
         response_data = {name: 0 for name in RESTAURANT_LIST}
+        location_user_counts = {name: [] for name in RESTAURANT_LIST}
+
         for queue in meal_queues:
             groups = await sync_to_async(list)(queue.groups.all())
-            print(f"Queue {queue.name} has {len(groups)} groups")
+            total_user_count = 0
             for group in groups:
-                user_count = await sync_to_async(list)(group.users.all())
-                print(f"len: {len(user_count)}")
-                # response_data[queue.location] += user_count
+                user_count = await database_sync_to_async(group.users.count)()
+                total_user_count += user_count
+            location_user_counts[queue.location].append(total_user_count)
+            print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
+
+        for location, counts in location_user_counts.items():
+            if counts:
+                response_data[location] = max(counts)
+                print(f"Location {location} has max user count: {response_data[location]}")
+
         return response_data
 
     async def get_taxi_waiting_status(self):
-        route_list = ['mju_to_station', 'station_to_mju']
-        taxi_queues = await database_sync_to_async(list)(
-            MatchingQueue.objects.filter(name__in=route_list)
+        ROUTE_LIST = ['station_to_mju', 'mju_to_station']
+        meal_queues = await database_sync_to_async(list)(
+            MatchingQueue.objects.filter(location__in=ROUTE_LIST)
         )
-        response_data = {route: 0 for route in route_list}
-        for queue in taxi_queues:
-            response_data[queue.name] = await database_sync_to_async(queue.users.count)()
+
+        response_data = {name: 0 for name in ROUTE_LIST}
+        location_user_counts = {name: [] for name in ROUTE_LIST}
+
+        for queue in meal_queues:
+            groups = await sync_to_async(list)(queue.groups.all())
+            total_user_count = 0
+            for group in groups:
+                user_count = await database_sync_to_async(group.users.count)()
+                total_user_count += user_count
+            location_user_counts[queue.location].append(total_user_count)
+            print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
+
+        for location, counts in location_user_counts.items():
+            if counts:
+                response_data[location] = max(counts)
+                print(f"Location {location} has max user count: {response_data[location]}")
+
         return response_data
 
     async def invite_friend(self, friend_id): 
@@ -617,9 +639,7 @@ class Matching(AsyncWebsocketConsumer):
                 print("YOU ARE RECEIVER. CANNOT START MATCHING")
                 await self.send_error("You are receiver. Cannot start matching", 400)
                 return
-            
-                            
-            
+        
             print(invitation.friend_group_channel)
             
             duo_group = await sync_to_async(FriendGroup.objects.create)(
@@ -666,6 +686,7 @@ class Matching(AsyncWebsocketConsumer):
         print(f"User number in group: {usernum_in_group}")
         
         group_added = False
+        joined_queue = None
         
         # 대기열이 존재하지 않는 경우 대기열 생성
         if not targetQueueList:
@@ -678,7 +699,7 @@ class Matching(AsyncWebsocketConsumer):
             await sync_to_async(newQueue.groups.add)(group)
             group_added = True
             self.room_group_name = newQueue.name
-            
+            joined_queue = newQueue
         # 대기열이 이미 존재하는 경우
         else:
             print("6")
@@ -706,6 +727,8 @@ class Matching(AsyncWebsocketConsumer):
                     await sync_to_async(queue.groups.add)(group)
                     group_added = True
                     self.room_group_name = queue.name
+                    joined_queue = queue
+                    
                     print(f"    Group added to queue: {group.name}")
                     # 큐에 추가 후 채팅방으로 빼주는 로직
                     break
@@ -724,6 +747,8 @@ class Matching(AsyncWebsocketConsumer):
                 await sync_to_async(newQueue.groups.add)(group)
                 group_added = True
                 self.room_group_name = newQueue.name 
+                joined_queue = newQueue
+                
                 print(f"Queue created: {newQueue}")
                 # 큐에 추가 후 채팅방으로 빼주는 로직
         
@@ -748,10 +773,12 @@ class Matching(AsyncWebsocketConsumer):
                 )
                 
                 await self.add_user_to_group(receiver, self.room_group_name)
+            
 
                 
             
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+            await self.send_waiting_status_in_loading(joined_queue)
 
 
         targetQueueList = await database_sync_to_async(list)(MatchingQueue.objects.filter(location=group.location))
@@ -815,9 +842,19 @@ class Matching(AsyncWebsocketConsumer):
             return
     
 
-    
-                    
-                    
+    async def send_waiting_status_in_loading(self, joined_queue):
+        user_num = 0
+        groups = await sync_to_async(list)(joined_queue.groups.all())
+        for group in groups:
+            temp = await sync_to_async(list)(group.users.all())
+            num = len(temp)
+            user_num += num
             
-            
-            
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "send_to_group",
+                "message": user_num,
+                "status": "waiting_status"
+            }
+        )
