@@ -26,7 +26,7 @@ class Matching(AsyncWebsocketConsumer):
         # Set up Redis connection
         self.redis = aioredis.from_url("redis://localhost")
         self.unique_channel_name = None
-
+    #연결 확인
     async def connect(self):
         self.user = self.scope["user"]
 
