@@ -55,6 +55,7 @@ def delete_chat_room(chat_room_id):
         chat_room = ChatRoom.objects.get(id=chat_room_id)
         #매너 온도 변경사항 적용
         apply_temperature_changes(chat_room)
+        #매너 온도 변경시 채팅방 삭제
         chat_room.delete()
         print(f"ChatRoom {chat_room.name} deleted.")
     except ChatRoom.DoesNotExist:
