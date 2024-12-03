@@ -1,5 +1,4 @@
 from django.db import models
-from my_app.models import CustomUser
 from matching2.models import FriendGroup
 # Create your models here.
 
@@ -7,7 +6,7 @@ class MatchingQueue(models.Model):
     name = models.CharField(max_length=100)
     groups = models.ManyToManyField(FriendGroup, related_name='queue',blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    confirmed_users = models.ManyToManyField(CustomUser, related_name='confirmed_queue',blank=True)
+    confirmed_users = models.ManyToManyField('my_app.CustomUser', related_name='confirmed_queue',blank=True)
     location = models.CharField(
         max_length=100,
         choices=(
