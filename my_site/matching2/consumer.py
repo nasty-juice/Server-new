@@ -57,7 +57,7 @@ class Matching(AsyncWebsocketConsumer):
         try:
             text_data_json = json.loads(text_data)
             action = text_data_json.get("action")
-            print(f"{self.user.student_number}--------------{action}----------------")
+            print(f"<{self.user.student_number}> : {action}")
             if not action:
                 await self.send_error("Invalid action", 400)
                 return
@@ -270,12 +270,12 @@ class Matching(AsyncWebsocketConsumer):
                 user_count = await database_sync_to_async(group.users.count)()
                 total_user_count += user_count
             location_user_counts[queue.location].append(total_user_count)
-            print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
+            # print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
 
         for location, counts in location_user_counts.items():
             if counts:
                 response_data[location] = max(counts)
-                print(f"Location {location} has max user count: {response_data[location]}")
+                # print(f"Location {location} has max user count: {response_data[location]}")
 
         return response_data
 
@@ -295,12 +295,12 @@ class Matching(AsyncWebsocketConsumer):
                 user_count = await database_sync_to_async(group.users.count)()
                 total_user_count += user_count
             location_user_counts[queue.location].append(total_user_count)
-            print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
+            # print(f"Queue {queue.name} at {queue.location} has {total_user_count} users")
 
         for location, counts in location_user_counts.items():
             if counts:
                 response_data[location] = max(counts)
-                print(f"Location {location} has max user count: {response_data[location]}")
+                # print(f"Location {location} has max user count: {response_data[location]}")
 
         return response_data
 
@@ -379,7 +379,6 @@ class Matching(AsyncWebsocketConsumer):
 
     async def check_existing_invitations(self, user):
         """Check for existing invitations."""
-        print("HI")
         if await sync_to_async(self.user.sent_invites.exists)():
             print("You have invitation.")
             return True

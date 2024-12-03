@@ -5,7 +5,7 @@ TARGET_LOCATION = {
     "mju": (37.224216, 127.187848)
 }
 
-RADIUS_LIMIT = 200  # meters
+RADIUS_LIMIT = 200 # meters
 
 def check_user_location(starting_point, user_lat, user_lon):
     

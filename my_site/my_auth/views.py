@@ -72,7 +72,8 @@ class UserDetailView(APIView):
             "username" : serializer.data["username"],
             "email" : serializer.data["email"],
             "student_number" : serializer.data["student_number"],
-            "department" : serializer.data["department"]
+            "department" : serializer.data["department"],
+            "temperature" : serializer.data["temperature"],
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
