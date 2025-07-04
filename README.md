@@ -57,13 +57,64 @@ This diagram illustrates the process of a user initiating a matching request, be
 -   **matching2**: Appears to be another version or component of the matching system.
 -   **taxi_matching**: A specific implementation for taxi-sharing matching.
 
+## `matching` vs. `matching2`
+
+This project contains two distinct but related Django applications for handling user matching: `matching` and `matching2`. Here’s a breakdown of their roles and the key differences.
+
+### `my_site/matching/`
+
+This application is a straightforward, real-time matching system for **individual users**.
+
+*   **`consumer.py`**: The core of the application. It handles WebSocket connections for real-time communication. When a user wants to find a match, they are added to a queue for a specific location. Once enough users are in the queue, it initiates a match confirmation process.
+*   **`models.py`**:
+    *   `MatchingQueue`: Represents a waiting queue for a specific location.
+    *   `MatchRequest`: A temporary model to manage a proposed match while waiting for users to accept or reject.
+*   **`views.py`**: Contains views to render the HTML pages for the matching interface and an API endpoint to get the status of waiting queues.
+*   **`urls.py`**: Defines the URL paths for the views and the WebSocket connection.
+*   **`utils.py`**: Provides asynchronous helper functions for database operations, like getting or creating a matching queue.
+*   **`tasks.py`**: Contains background tasks, such as deleting a chat room after a certain time.
+
+**In short, `matching` is a system where individual users join a queue and are matched with other individuals in real-time.**
+
+### `my_site/matching2/`
+
+This is a more advanced version of the matching system, with a focus on **group matching** and a more complex workflow.
+
+*   **`consumer.py`**: A much more sophisticated WebSocket consumer. It manages a friend invitation system, allowing users to form groups *before* entering a matching queue. It handles different matching categories (like meals and taxis) and broadcasts status updates. It also includes more robust error handling and connection management.
+*   **`models.py`**:
+    *   `InvitationRequest`: Stores friend invitations between users.
+    *   `FriendGroup`: Represents a group of one or more users (a "solo" or "duo" group) that will enter the matching queue as a single unit.
+*   **`match.py`**: This file separates the core matching logic from the consumer. It is responsible for handling the final match confirmation process after a queue is full, creating a chat room, and cleaning up the temporary groups and queues.
+*   **`utils.py`**: Contains helper functions, including a `Timer` class for managing countdowns during the match confirmation phase.
+*   **`apps.py`**: In addition to the standard setup, it includes a startup routine to clear out old data from Redis, which is used by Django Channels. This helps prevent issues with stale connections.
+
+### Key Differences
+
+1.  **Matching Unit**:
+    *   `matching`: Matches **individual users**.
+    *   `matching2`: Matches **pre-formed groups of users** (e.g., you and a friend).
+
+2.  **Workflow**:
+    *   `matching`: Simple workflow: join a queue -> wait for match -> confirm.
+    *   `matching2`: More complex workflow: invite friend(s) -> form a group -> join a queue as a group -> wait for match -> confirm.
+
+3.  **Features**:
+    *   `matching2` has a full friend invitation system, which is absent in `matching`.
+    *   `matching2` is designed to handle multiple matching categories (meals, taxis) and broadcast their status.
+    *   `matching2` has more robust connection and state management, including better handling of user disconnections.
+
+4.  **Code Structure**:
+    *   `matching2` has a cleaner separation of concerns, with the core matching logic extracted into its own `match.py` file.
+
+In conclusion, **`matching2` is an evolution of `matching`**. It expands on the original concept by introducing a social layer (friend invitations and groups) and creating a more scalable and feature-rich system. It reuses the `MatchingQueue` model from the `matching` app but in a more advanced way, by adding groups to it instead of individual users.
+
 ---
 
 # 프로젝트 블루베리 (Korean)
 
 ## 개요
 
-블루베리는 사용자 간의 실시간 매칭 및 통신을 용이하게 하도록 설계된 Django 기반 웹 애플리케이션입니다. 이 프로젝트는 WebSocket 통신을 위한 Django Channels, 비동기 처리를 위한 Celery, 그리고 사용자 인증, 채팅, 다양한 매칭 기능 등 시스템의 여러 측면을 처리하기 위한 다양한 Django 애플리케이션을 활용합니다.
+블루베리는 대학교 학생들이 쉽고 빠르게 학식메이트를 찾을 수 있게 해주고 지하철역에서 학교까지 같이 택시를 탑승할 택시메이트를 간편하게 찾을 수 있도록 해 경제적 부담을 줄일 수 있도록 설계된 Django 기반 웹 애플리케이션입니다. 이 프로젝트는 WebSocket 통신을 위한 Django Channels, 비동기 처리를 위한 Celery, 그리고 사용자 인증, 채팅, 다양한 매칭 기능 등 시스템의 여러 측면을 처리하기 위한 다양한 Django 애플리케이션을 활용합니다.
 
 ## 데모 비디오
 
@@ -115,5 +166,56 @@ This diagram illustrates the process of a user initiating a matching request, be
 -   **my_auth**: 사용자 인증, 등록 및 프로필 관리를 처리합니다.
 -   **chat**: Django Channels를 사용하여 실시간 채팅 기능을 관리합니다.
 -   **matching**: 특정 기준에 따라 사용자를 매칭하는 로직을 구현합니다.
--   **matching2**: 매칭 시스템의 다른 버전 또는 구성 요소로 보입니다.
+-   **matching2**: 매칭 시스템의 다른 버전 또는 구성 요소입니다.
 -   **taxi_matching**: 택시 공유 매칭을 위한 특정 구현입니다.
+
+## `matching`과 `matching2` 비교
+
+이 프로젝트에는 사용자 매칭을 처리하기 위한 두 개의 관련성 있는 Django 애플리케이션, `matching`과 `matching2`가 포함되어 있습니다. 각 애플리케이션의 역할과 주요 차이점은 다음과 같습니다.
+
+### `my_site/matching/`
+
+이 애플리케이션은 **개인 사용자**를 위한 간단한 실시간 매칭 시스템입니다.
+
+*   **`consumer.py`**: 애플리케이션의 핵심입니다. 실시간 통신을 위해 WebSocket 연결을 처리합니다. 사용자가 매칭을 원하면 특정 위치의 대기열에 추가됩니다. 대기열에 충분한 사용자가 모이면 매칭 확인 프로세스를 시작합니다.
+*   **`models.py`**:
+    *   `MatchingQueue`: 특정 위치의 대기열을 나타냅니다.
+    *   `MatchRequest`: 사용자가 수락 또는 거절을 기다리는 동안 제안된 매칭을 관리하는 임시 모델입니다.
+*   **`views.py`**: 매칭 인터페이스를 위한 HTML 페이지를 렌더링하는 뷰와 대기열 상태를 가져오는 API 엔드포인트를 포함합니다.
+*   **`urls.py`**: 뷰와 WebSocket 연결을 위한 URL 경로를 정의합니다.
+*   **`utils.py`**: 매칭 대기열을 가져오거나 생성하는 등 데이터베이스 작업을 위한 비동기 헬퍼 함수를 제공합니다.
+*   **`tasks.py`**: 일정 시간 후 채팅방을 삭제하는 등 백그라운드 작업을 포함합니다.
+
+**요약하자면, `matching`은 개인 사용자가 대기열에 참여하여 다른 개인과 실시간으로 매칭되는 시스템입니다.**
+
+### `my_site/matching2/`
+
+이것은 **그룹 매칭**에 중점을 둔 고급 버전의 매칭 시스템으로, 더 복잡한 워크플로우를 가집니다.
+
+*   **`consumer.py`**: 훨씬 더 정교한 WebSocket 컨슈머입니다. 친구 초대 시스템을 관리하여 사용자가 매칭 대기열에 들어가기 *전에* 그룹을 형성할 수 있도록 합니다. 식사 및 택시와 같은 다양한 매칭 카테고리를 처리하고 상태 업데이트를 브로드캐스트합니다. 또한 더 강력한 오류 처리 및 연결 관리를 포함합니다.
+*   **`models.py`**:
+    *   `InvitationRequest`: 사용자 간의 친구 초대장을 저장합니다.
+    *   `FriendGroup`: 단일 단위로 매칭 대기열에 들어갈 한 명 이상의 사용자 그룹("솔로" 또는 "듀오" 그룹)을 나타냅니다.
+*   **`match.py`**: 이 파일은 핵심 매칭 로직을 컨슈머에서 분리합니다. 대기열이 가득 찬 후 최종 매칭 확인 프로세스를 처리하고, 채팅방을 만들고, 임시 그룹 및 대기열을 정리하는 역할을 합니다.
+*   **`utils.py`**: 매칭 확인 단계에서 카운트다운을 관리하기 위한 `Timer` 클래스를 포함한 헬퍼 함수를 포함합니다.
+*   **`apps.py`**: 표준 설정 외에도 Django Channels에서 사용하는 Redis의 오래된 데이터를 정리하는 시작 루틴을 포함합니다. 이는 오래된 연결로 인한 문제를 방지하는 데 도움이 됩니다.
+
+### 주요 차이점
+
+1.  **매칭 단위**:
+    *   `matching`: **개인 사용자**를 매칭합니다.
+    *   `matching2`: **사전에 형성된 사용자 그룹**(예: 당신과 친구)을 매칭합니다.
+
+2.  **워크플로우**:
+    *   `matching`: 간단한 워크플로우: 대기열 참여 -> 매칭 대기 -> 확인.
+    *   `matching2`: 더 복잡한 워크플로우: 친구 초대 -> 그룹 형성 -> 그룹으로 대기열 참여 -> 매칭 대기 -> 확인.
+
+3.  **기능**:
+    *   `matching2`에는 `matching`에는 없는 완전한 친구 초대 시스템이 있습니다.
+    *   `matching2`는 여러 매칭 카테고리(식사, 택시)를 처리하고 상태를 브로드캐스트하도록 설계되었습니다.
+    *   `matching2`는 사용자 연결 끊김을 더 잘 처리하는 등 더 강력한 연결 및 상태 관리를 제공합니다.
+
+4.  **코드 구조**:
+    *   `matching2`는 핵심 매칭 로직을 자체 `match.py` 파일로 추출하여 더 깔끔하게 관심사를 분리했습니다.
+
+결론적으로, **`matching2`는 `matching`의 진화된 버전입니다.** 친구 초대 및 그룹이라는 소셜 레이어를 도입하고 더 확장 가능하고 기능이 풍부한 시스템을 만들어 원래 개념을 확장합니다. `matching` 앱의 `MatchingQueue` 모델을 재사용하지만 개별 사용자 대신 그룹을 추가하는 더 진보된 방식으로 사용합니다.
